@@ -87,6 +87,33 @@ jobs:
           name: artifacts-plan-dist-manifest
           path: plan-dist-manifest.json
 
+  # Keep the JavaScript implementation in the same GitHub Release as the
+  # native cargo-dist artifacts. Registry publication remains disabled.
+  build-node-package:
+    needs:
+      - plan
+    if: ${{ needs.plan.outputs.publishing == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19
+          cache: npm
+          cache-dependency-path: packages/miilo-cli-node/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: packages/miilo-cli-node
+      - run: npm test
+        working-directory: packages/miilo-cli-node
+      - run: npm pack --pack-destination ../../target/distrib
+        working-directory: packages/miilo-cli-node
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifacts-node-package
+          path: target/distrib/*.tgz
+
   # Build and packages all the platform-specific things
   build-local-artifacts:
     name: build-local-artifacts (${{ join(matrix.targets, ', ') }})
@@ -225,8 +252,9 @@ jobs:
       - plan
       - build-local-artifacts
       - build-global-artifacts
+      - build-node-package
     # Only run if we're "publishing", and only if plan, local and global didn't fail (skipped is fine)
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.build-node-package.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-22.04"

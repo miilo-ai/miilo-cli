@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand};
 pub struct Args {
     #[arg(
         long,
+        visible_alias = "url",
         env = "MIILO_URL",
         default_value = "http://127.0.0.1:3700",
         global = true

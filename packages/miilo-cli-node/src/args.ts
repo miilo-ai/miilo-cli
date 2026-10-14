@@ -22,7 +22,9 @@ export function parseArguments(values: string[], environment = process.env): Arg
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
     if (value === "--json") json = true;
-    else if (value === "--url") endpoint = required(values[++index], "--url needs a value");
+    else if (value === "--endpoint" || value === "--url") {
+      endpoint = required(values[++index], `${value} needs a value`);
+    }
     else if (value === "--token") token = required(values[++index], "--token needs a value");
     else remaining.push(required(value, "missing argument"));
   }
@@ -52,7 +54,7 @@ function parseCommand(values: string[]): Command {
       return { kind: "work-explain", target: values[2], question: values[4] };
     }
   }
-  throw new Error("usage: miilo [--url URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+  throw new Error("usage: miilo [--endpoint URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
 }
 
 export function validateTarget(value: string): [string, string] {

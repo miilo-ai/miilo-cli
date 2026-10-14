@@ -9,7 +9,7 @@ import type { ExplanationRequest, WorkItem } from "./types.js";
 export async function run(values = process.argv.slice(2)): Promise<void> {
   const args = parseArguments(values);
   if (args.command.kind === "help") {
-    console.log("usage: miilo [--url URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+    console.log("usage: miilo [--endpoint URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
     return;
   }
   const client = new MiiloClient(args.endpoint, args.token);

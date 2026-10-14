@@ -187,4 +187,31 @@ mod tests {
                 if reason == "retry" && message == "refresh"
         ));
     }
+
+    #[test]
+    fn accepts_crlf_and_requires_a_resumable_cursor() {
+        let mut decoder = Decoder::default();
+        assert!(
+            decoder
+                .push(b"event: miilo.event\r\ndata: {}\r\n\r\n")
+                .is_err_and(|error| matches!(error, ClientError::MissingStreamCursor))
+        );
+    }
+
+    #[test]
+    fn rejects_oversized_and_incomplete_frames() {
+        let mut decoder = Decoder::default();
+        let oversized = vec![b'x'; MAX_FRAME_BYTES + 1];
+        assert!(matches!(
+            decoder.push(&oversized),
+            Err(ClientError::StreamFrameTooLarge)
+        ));
+
+        let mut decoder = Decoder::default();
+        decoder.push(b"data: {}").unwrap();
+        assert!(matches!(
+            decoder.finish(),
+            Err(ClientError::IncompleteStreamFrame)
+        ));
+    }
 }

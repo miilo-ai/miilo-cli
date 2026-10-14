@@ -11,9 +11,10 @@ test-rust:
 test-rust-local:
 	CARGO_HOME="$(CARGO_HOME)" ./scripts/test-rust-local.sh
 
-test-node: test-node-package
+test-node:
 	cd packages/miilo-cli-node && NPM_CONFIG_CACHE="$(NPM_CONFIG_CACHE)" ../../scripts/node-modern.sh npm ci --ignore-scripts
 	cd packages/miilo-cli-node && NPM_CONFIG_CACHE="$(NPM_CONFIG_CACHE)" ../../scripts/node-modern.sh npm test
+	NPM_CONFIG_CACHE="$(NPM_CONFIG_CACHE)" ./scripts/test-node-package.sh
 
 test-node-package:
 	NPM_CONFIG_CACHE="$(NPM_CONFIG_CACHE)" ./scripts/test-node-package.sh

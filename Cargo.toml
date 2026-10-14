@@ -23,6 +23,9 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "tim
 [workspace.metadata.dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.33.0"
+# The generated workflow is intentionally extended with the tested Node package.
+# Keep dist responsible for artifacts while preserving that custom release job.
+allow-dirty = ["ci", "msi"]
 # CI backends to support
 ci = "github"
 # The installers to generate for each app

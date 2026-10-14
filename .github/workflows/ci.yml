@@ -36,7 +36,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm test
-      - run: npm pack --dry-run
+      - run: ../../scripts/test-node-package.sh
 
   smoke:
     runs-on: ubuntu-latest

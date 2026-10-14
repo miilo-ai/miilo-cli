@@ -9,9 +9,6 @@ export async function* decodeSse(
   let buffer = "";
   for await (const chunk of source) {
     buffer += decoder.decode(chunk, { stream: true });
-    if (Buffer.byteLength(buffer) > MAX_FRAME_BYTES) {
-      throw new Error("Miilo event stream frame exceeded 1 MiB");
-    }
     let boundary = frameBoundary(buffer);
     while (boundary !== undefined) {
       const frame = buffer.slice(0, boundary.index);
@@ -19,6 +16,9 @@ export async function* decodeSse(
       const event = decodeFrame(frame);
       if (event) yield event;
       boundary = frameBoundary(buffer);
+    }
+    if (Buffer.byteLength(buffer) > MAX_FRAME_BYTES) {
+      throw new Error("Miilo event stream frame exceeded 1 MiB");
     }
   }
   buffer += decoder.decode();

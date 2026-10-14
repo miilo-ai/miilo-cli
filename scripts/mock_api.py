@@ -11,7 +11,11 @@ SNAPSHOT = {
     "snapshotId": "smoke-1",
     "observedAt": "2026-10-13T00:00:00Z",
     "cursor": "smoke:1",
-    "providers": [{"id": "factory", "name": "Fixture factory"}],
+    "providers": [{
+        "id": "factory", "name": "Fixture factory",
+        "kind": "automation_factory", "health": "healthy", "nativeUrl": None,
+        "capabilities": {"observe": ["tasks"], "control": [], "features": {}},
+    }],
     "workItems": [{
         "id": "task-1", "providerId": "factory", "kind": "task",
         "title": "Validate the observer", "summary": "The fixture is ready.",

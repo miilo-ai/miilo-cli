@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseArguments, validateTarget } from "./args.js";
 import { MiiloClient, MiiloHttpError } from "./client.js";
 import { writeConnections, writeDoctor, writeExplanation, writeJson, writeStreamEvent, writeWork, writeWorkItem } from "./output.js";
@@ -6,6 +8,10 @@ import type { ExplanationRequest, WorkItem } from "./types.js";
 
 export async function run(values = process.argv.slice(2)): Promise<void> {
   const args = parseArguments(values);
+  if (args.command.kind === "help") {
+    console.log("usage: miilo [--url URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+    return;
+  }
   const client = new MiiloClient(args.endpoint, args.token);
   if (args.command.kind === "doctor") {
     const [health, snapshot] = await Promise.all([client.health(), client.snapshot()]);
@@ -74,9 +80,18 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-if (import.meta.url === new URL(process.argv[1] ?? "", "file:").href) {
+if (isEntrypoint()) {
   run().catch((error: unknown) => {
     console.error(`miilo: ${message(error)}`);
     process.exitCode = 1;
   });
+}
+
+function isEntrypoint(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
 }

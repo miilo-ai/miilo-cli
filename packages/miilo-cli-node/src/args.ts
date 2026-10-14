@@ -1,4 +1,5 @@
 export type Command =
+  | { kind: "help" }
   | { kind: "doctor" }
   | { kind: "connections" }
   | { kind: "work-list"; connection?: string }
@@ -30,6 +31,7 @@ export function parseArguments(values: string[], environment = process.env): Arg
 }
 
 function parseCommand(values: string[]): Command {
+  if ((values[0] === "--help" || values[0] === "-h") && values.length === 1) return { kind: "help" };
   if (values[0] === "doctor" && values.length === 1) return { kind: "doctor" };
   if (values[0] === "connections" && values[1] === "list" && values.length === 2) return { kind: "connections" };
   if (values[0] === "watch" && values.length === 1) return { kind: "watch" };

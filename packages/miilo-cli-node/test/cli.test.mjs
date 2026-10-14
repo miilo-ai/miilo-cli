@@ -7,6 +7,7 @@ import { MiiloClient } from "../dist/client.js";
 import { decodeSse } from "../dist/sse.js";
 
 test("parses the public command surface", () => {
+  assert.deepEqual(parseArguments(["--help"]).command, { kind: "help" });
   assert.equal(parseArguments(["doctor"]).command.kind, "doctor");
   assert.deepEqual(parseArguments(["work", "list", "--connection", "factory"]).command, { kind: "work-list", connection: "factory" });
   assert.deepEqual(validateTarget("factory/task-1"), ["factory", "task-1"]);

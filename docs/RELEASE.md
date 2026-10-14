@@ -1,6 +1,18 @@
 # Release process
 
-1. Confirm `miilo-sdk` tag `v0.1.0` is publicly readable.
+## One-time repository setup
+
+- Make `miilo-sdk`, `miilo-cli`, and `homebrew-tap` publicly readable before the
+  first public release.
+- Add a fine-grained `HOMEBREW_TAP_TOKEN` Actions secret to `miilo-cli`. Scope it
+  only to `miilo-ai/homebrew-tap` with repository contents read/write access.
+- Configure npm trusted publishing for `@miilo-ai/cli` before enabling registry
+  publication. The checked-in workflow deliberately packs an artifact without
+  publishing it.
+
+## Every release
+
+1. Confirm the SDK tag referenced by `Cargo.lock` is publicly readable.
 2. Run `make test` and `make smoke` on a clean checkout.
 3. Push a `vX.Y.Z` tag. `dist` builds native macOS, Linux, and Windows artifacts,
    installers, checksums, attestations, MSI, and the Homebrew formula.

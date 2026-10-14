@@ -1,0 +1,37 @@
+[package]
+name = "miilo-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish.workspace = true
+description = "Private-by-default terminal observer for Miilo"
+readme = "../../README.md"
+keywords = ["agents", "automation", "cli", "observability"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "miilo"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env"] }
+futures-util = "0.3"
+miilo-adapter-sdk.workspace = true
+miilo-client = { path = "../miilo-client" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[package.metadata.dist]
+dist = true
+formula = "miilo"
+
+[package.metadata.wix]
+upgrade-guid = "0D7BFA4F-851A-4067-BF7C-32A373A90B2B"
+path-guid = "03CCDDD0-AF6A-49E8-9905-C6C24FE4A285"
+license = false
+eula = false

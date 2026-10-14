@@ -1,0 +1,25 @@
+pkgname=miilo-cli
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Private-by-default terminal observer for Miilo'
+arch=('x86_64' 'aarch64')
+url='https://github.com/miilo-ai/miilo-cli'
+license=('Apache-2.0')
+provides=('miilo')
+conflicts=('miilo')
+source_x86_64=("miilo-cli-x86_64-unknown-linux-gnu.tar.xz::${url}/releases/download/v${pkgver}/miilo-cli-x86_64-unknown-linux-gnu.tar.xz")
+source_aarch64=("miilo-cli-aarch64-unknown-linux-gnu.tar.xz::${url}/releases/download/v${pkgver}/miilo-cli-aarch64-unknown-linux-gnu.tar.xz")
+sha256sums_x86_64=('@LINUX_X86_64_SHA256@')
+sha256sums_aarch64=('@LINUX_AARCH64_SHA256@')
+
+package() {
+  local target
+  case "$CARCH" in
+    x86_64) target='x86_64-unknown-linux-gnu' ;;
+    aarch64) target='aarch64-unknown-linux-gnu' ;;
+  esac
+
+  local release_dir="$srcdir/miilo-cli-${target}"
+  install -Dm755 "$release_dir/miilo" "$pkgdir/usr/bin/miilo"
+  install -Dm644 "$release_dir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

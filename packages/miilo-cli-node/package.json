@@ -1,0 +1,36 @@
+{
+  "name": "@miilo-ai/cli",
+  "version": "0.1.0",
+  "description": "Node.js implementation of the private-by-default Miilo observer CLI",
+  "type": "module",
+  "license": "Apache-2.0",
+  "homepage": "https://miilo.tech",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miilo-ai/miilo-cli.git",
+    "directory": "packages/miilo-cli-node"
+  },
+  "bin": {
+    "miilo": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.10",
+    "typescript": "^5.9.3"
+  }
+}

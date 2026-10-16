@@ -22,6 +22,7 @@ export class MiiloClient {
 
   constructor(endpoint: string, private readonly token?: string) {
     this.endpoint = new URL(endpoint.endsWith("/") ? endpoint : `${endpoint}/`);
+    if (this.endpoint.username || this.endpoint.password || this.endpoint.search || this.endpoint.hash) throw new Error("Miilo endpoint must not contain credentials, a query, or a fragment");
     if (!["http:", "https:"].includes(this.endpoint.protocol)) {
       throw new Error(`Miilo endpoint must use HTTP or HTTPS, not ${this.endpoint.protocol}`);
     }
@@ -47,8 +48,8 @@ export class MiiloClient {
     const headers = this.headers();
     headers.set("accept", "text/event-stream");
     if (cursor) headers.set("last-event-id", cursor);
-    const response = await fetch(new URL("v1/stream", this.endpoint), { headers });
-    await ensureSuccess(response);
+    const response = await fetch(new URL("v1/stream", this.endpoint), { headers, redirect: "error" });
+    await ensureSuccess(response, this.token);
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.startsWith("text/event-stream")) {
       throw new Error(`Miilo returned ${contentType || "an unknown content type"} instead of text/event-stream`);
@@ -65,8 +66,8 @@ export class MiiloClient {
     const headers = this.headers();
     headers.set("accept", "application/json");
     if (init.body) headers.set("content-type", "application/json");
-    const response = await fetch(new URL(path, this.endpoint), { ...init, headers });
-    await ensureSuccess(response);
+    const response = await fetch(new URL(path, this.endpoint), { ...init, headers, redirect: "error" });
+    await ensureSuccess(response, this.token);
     return (await response.json()) as T;
   }
 
@@ -90,8 +91,8 @@ async function* readBody(body: ReadableStream<Uint8Array>): AsyncGenerator<Uint8
   }
 }
 
-async function ensureSuccess(response: Response): Promise<void> {
+async function ensureSuccess(response: Response, token?: string): Promise<void> {
   if (response.ok) return;
   const message = (await response.text()) || response.statusText || "unknown error";
-  throw new MiiloHttpError(response.status, message);
+  throw new MiiloHttpError(response.status, token ? message.replaceAll(token, "[redacted]") : message);
 }

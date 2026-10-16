@@ -31,6 +31,7 @@ The native Rust binary is the default:
 
 ```bash
 # macOS and Linux
+brew tap miilo-ai/tap https://github.com/miilo-ai/miilo-homebrew-tap.git
 brew install miilo-ai/tap/miilo
 
 # macOS or Linux without Homebrew
@@ -42,6 +43,17 @@ Windows releases include a PowerShell installer, MSI, and ZIP. A true Node.js
 implementation is also maintained in [`packages/miilo-cli-node/`](packages/miilo-cli-node/)
 for environments that standardize on Node 20.19 or newer. Both implementations
 install the same `miilo` command, so install one globally.
+
+## Let your agent help
+
+The [miilo-connect skill](skills/miilo-connect/SKILL.md) guides a terminal-capable
+assistant through installation checks, endpoint selection and authenticated
+read-only observation. Read or attach the Markdown guide using your assistant’s
+supported workflow; it is not an automatically installed plugin for every tool.
+The guide never extracts credentials from another agent or launches replacement
+work to simulate activity. Current account-token provisioning and provider
+registration remain separate backend steps. There is no `miilo setup` or
+`miilo login` command in this release.
 
 ## What it connects to
 
@@ -89,3 +101,13 @@ publishing is explicitly enabled.
 See [`docs/RELEASE.md`](docs/RELEASE.md) before tagging.
 
 Apache-2.0. The license does not grant rights to the Miilo name or marks.
+
+## Credential files
+
+Prefer `MIILO_TOKEN_FILE=/path/to/private/token` or `--token-file /path/to/private/token` over token contents in arguments. Rust and Node accept the same protected-file configuration and reject credential-bearing endpoint URLs and redirects. Legacy `MIILO_TOKEN` remains supported; do not set both methods. Restart a running client after token rotation. See [CE credential operations](https://github.com/miilo-ai/miilo-ce/blob/main/docs/CREDENTIALS.md) for provisioning, rotation, transport and current single-operator limits.
+
+For the release-to-VM checklist, see [Omarchy acceptance](docs/OMARCHY.md). Commands that depend on public assets remain gated until those assets exist.
+
+## Release automation
+
+See [.github/RELEASING.md](.github/RELEASING.md) for private-repository rehearsals, manifest-driven tags, credential-missing skips and activation. Publication stays disabled until explicitly requested/configured.

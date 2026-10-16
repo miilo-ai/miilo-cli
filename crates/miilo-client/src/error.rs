@@ -2,6 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
+    #[error("Miilo endpoint must not contain credentials, a query, or a fragment")]
+    UnsafeEndpoint,
     #[error("invalid Miilo endpoint: {0}")]
     InvalidEndpoint(#[from] url::ParseError),
     #[error("Miilo endpoint must use HTTP or HTTPS, not {0}")]

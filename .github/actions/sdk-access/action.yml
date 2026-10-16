@@ -1,0 +1,18 @@
+name: Pinned public or private SDK access
+description: Resolve the exact SDK tag without making repositories public
+inputs:
+  token:
+    description: Optional contents-read token for the separate private SDK
+    required: false
+outputs:
+  ready:
+    description: Whether SDK qualification can run
+    value: ${{ steps.access.outputs.ready }}
+runs:
+  using: composite
+  steps:
+  - id: access
+    shell: bash
+    run: python .github/release-tools/sdk_access.py
+    env:
+      SDK_READ_TOKEN: ${{ inputs.token }}

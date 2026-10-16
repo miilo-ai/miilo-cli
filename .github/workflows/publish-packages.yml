@@ -1,0 +1,77 @@
+name: Optional registry publishing
+'on':
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+      channel:
+        type: choice
+        options:
+        - all
+        - npm
+        default: all
+      publish:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: registry-${{ inputs.tag }}-${{ inputs.channel }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    uses: ./.github/workflows/qualify.yml
+    with:
+      ref: ${{ inputs.tag }}
+    secrets: inherit
+  npm:
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ inputs.tag }}
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.13'
+    - id: policy
+      run: python .github/release-tools/publication.py
+      env:
+        MIILO_PUBLISH: ${{ inputs.publish && (inputs.channel == 'all' || inputs.channel == 'npm') }}
+        RELEASE_TOKEN: ${{ vars.MIILO_NPM_TRUSTED_PUBLISHER == 'true' && 'oidc-configured' || secrets.NPM_TOKEN }}
+        DEPENDENCIES_READY: ${{ needs.qualify.outputs.ready == 'true' && github.event.repository.private == false }}
+    - if: steps.policy.outputs.publish == 'true'
+      run: python .github/release-tools/version.py --tag "$TAG"
+      env:
+        TAG: ${{ inputs.tag }}
+    - if: steps.policy.outputs.publish == 'true'
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      with:
+        node-version: '24'
+        registry-url: https://registry.npmjs.org
+    - if: steps.policy.outputs.publish == 'true'
+      run: |-
+        gh release download "$TAG" --pattern "miilo-ai-cli-*.tgz" --dir registry-payload
+        npm publish registry-payload/*.tgz --access public --provenance
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ inputs.tag }}
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  no-release:
+    needs:
+    - qualify
+    - npm
+    if: always() && needs.qualify.outputs.ready != 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - run: |-
+        echo "No release has been made"
+        echo "No release has been made" >> "$GITHUB_STEP_SUMMARY"

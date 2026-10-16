@@ -82,3 +82,30 @@ test("rejects non-http endpoints and preserves HTTP error evidence", async (cont
   const client = new MiiloClient(`http://127.0.0.1:${address.port}`);
   await assert.rejects(() => client.snapshot(), /HTTP 409: snapshot required/);
 });
+
+test("remote error bodies redact credentials and redirects are not followed", async (context) => {
+  let count = 0;
+  const server = createServer((request, response) => {
+    count++;
+    if (request.url === '/v1/snapshot') {
+      response.statusCode = 401;
+      response.end('Rejected private-test-token: Bearer private-test-token');
+    } else {
+      response.statusCode = 302;
+      response.setHeader('location', '/should-not-receive-credentials');
+      response.end();
+    }
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  context.after(() => server.close());
+  const client = new MiiloClient(`http://127.0.0.1:${server.address().port}`, 'private-test-token');
+  await assert.rejects(() => client.snapshot(), error => {
+    assert.equal(error.status, 401);
+    assert.ok(!error.message.includes('private-test-token'));
+    assert.match(error.message, /redacted/);
+    return true;
+  });
+  await assert.rejects(() => client.health());
+  assert.equal(count, 2, 'redirect target must never receive a request');
+});

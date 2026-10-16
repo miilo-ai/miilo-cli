@@ -1,0 +1,82 @@
+name: Optional AUR publishing
+'on':
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+      publish:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: aur-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: aur
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.13'
+    - id: policy
+      run: python .github/release-tools/publication.py
+      env:
+        MIILO_PUBLISH: ${{ inputs.publish }}
+        RELEASE_TOKEN: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        DEPENDENCIES_READY: ${{ github.event.repository.private == false && secrets.AUR_KNOWN_HOSTS != '' }}
+    - if: steps.policy.outputs.publish == 'true'
+      name: Download and render verified release recipe
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ inputs.tag }}
+        KIND: cli
+      run: |
+        set -euo pipefail
+        gh release download "$TAG" --pattern "*linux-gnu.tar.xz" --pattern "*.sha256" --dir release-assets
+        python .github/release-tools/render-aur.py --tag "$TAG" --repo "$GITHUB_REPOSITORY" --kind "$KIND"
+        for archive in release-assets/*.tar.xz release-assets/*.tar.gz; do
+          [ -f "$archive" ] || continue
+          gh attestation verify "$archive" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-ref "refs/tags/$TAG"
+        done
+    - if: steps.policy.outputs.publish == 'true'
+      name: Arch recipe validation (unprivileged makepkg)
+      run: "set -euo pipefail\nmkdir -p aur-result\ndocker run --rm -v \"$PWD/aur:/recipe:ro\" -v \"$PWD/aur-result:/out\"\
+        \ archlinux:base bash -euc '\n  pacman -Syu --noconfirm --needed base-devel namcap git >/dev/null\n  useradd -m builder\n\
+        \  cp /recipe/PKGBUILD /home/builder/PKGBUILD\n  chown builder:builder /home/builder/PKGBUILD\n  cd /home/builder\n\
+        \  runuser -u builder -- makepkg --printsrcinfo > /out/.SRCINFO\n  runuser -u builder -- makepkg --verifysource\n\
+        \  runuser -u builder -- makepkg --nodeps --noconfirm\n  namcap PKGBUILD\n  pacman -U --noconfirm ./*.pkg.tar.zst\
+        \ >/dev/null\n  program=$(sed -n \"s/^pkgname=\\(.*\\)-bin/\\1/p\" PKGBUILD)\n  \"$program\" --version\n  pacman -R\
+        \ --noconfirm \"$program-bin\" >/dev/null\n  cp PKGBUILD /out/PKGBUILD\n' "
+    - if: steps.policy.outputs.publish == 'true'
+      name: Push recipes to AUR
+      env:
+        AUR_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        AUR_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
+      run: |-
+        set -euo pipefail
+        umask 077
+        printf '%s\n' "$AUR_KEY" > "$RUNNER_TEMP/aur-key"
+        printf '%s\n' "$AUR_HOSTS" > "$RUNNER_TEMP/aur-known-hosts"
+        trap 'rm -f "$RUNNER_TEMP/aur-key" "$RUNNER_TEMP/aur-known-hosts"' EXIT
+        export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/aur-key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/aur-known-hosts"
+        package=$(sed -n 's/^pkgname=//p' aur-result/PKGBUILD)
+        git clone "ssh://aur@aur.archlinux.org/$package.git" aur-checkout
+        cp aur-result/PKGBUILD aur-result/.SRCINFO aur-checkout/
+        cd aur-checkout
+        git config user.name 'Miilo release automation'
+        git config user.email 'contact@miilo.tech'
+        git add PKGBUILD .SRCINFO
+        if git diff --cached --quiet; then
+          echo 'No release has been made'
+          echo 'No release has been made' >> "$GITHUB_STEP_SUMMARY"
+        else
+          git commit -m 'Update verified Miilo release recipe'
+          git push origin HEAD:master
+        fi

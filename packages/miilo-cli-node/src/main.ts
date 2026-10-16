@@ -2,6 +2,7 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArguments, validateTarget } from "./args.js";
+import { resolveCredential } from "./credentials.js";
 import { MiiloClient, MiiloHttpError } from "./client.js";
 import { writeConnections, writeDoctor, writeExplanation, writeJson, writeStreamEvent, writeWork, writeWorkItem } from "./output.js";
 import type { ExplanationRequest, WorkItem } from "./types.js";
@@ -9,10 +10,10 @@ import type { ExplanationRequest, WorkItem } from "./types.js";
 export async function run(values = process.argv.slice(2)): Promise<void> {
   const args = parseArguments(values);
   if (args.command.kind === "help") {
-    console.log("usage: miilo [--endpoint URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+    console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <doctor|connections list|work list|work show|work explain|watch>");
     return;
   }
-  const client = new MiiloClient(args.endpoint, args.token);
+  const client = new MiiloClient(args.endpoint, resolveCredential(args.token, args.tokenFile));
   if (args.command.kind === "doctor") {
     const [health, snapshot] = await Promise.all([client.health(), client.snapshot()]);
     return args.json ? writeJson({ health, snapshot }) : writeDoctor(health, snapshot);

@@ -10,6 +10,7 @@ export type Command =
 export interface Arguments {
   endpoint: string;
   token?: string;
+  tokenFile?: string;
   json: boolean;
   command: Command;
 }
@@ -18,6 +19,7 @@ export function parseArguments(values: string[], environment = process.env): Arg
   const remaining: string[] = [];
   let endpoint = environment.MIILO_URL ?? "http://127.0.0.1:3700";
   let token = environment.MIILO_TOKEN;
+  let tokenFile = environment.MIILO_TOKEN_FILE;
   let json = false;
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
@@ -25,11 +27,12 @@ export function parseArguments(values: string[], environment = process.env): Arg
     else if (value === "--endpoint" || value === "--url") {
       endpoint = required(values[++index], `${value} needs a value`);
     }
+    else if (value === "--token-file") tokenFile = required(values[++index], "--token-file needs a value");
     else if (value === "--token") token = required(values[++index], "--token needs a value");
     else remaining.push(required(value, "missing argument"));
   }
   const command = parseCommand(remaining);
-  return token ? { endpoint, token, json, command } : { endpoint, json, command };
+  return { endpoint, json, command, ...(token === undefined ? {} : { token }), ...(tokenFile === undefined ? {} : { tokenFile }) };
 }
 
 function parseCommand(values: string[]): Command {
@@ -54,7 +57,7 @@ function parseCommand(values: string[]): Command {
       return { kind: "work-explain", target: values[2], question: values[4] };
     }
   }
-  throw new Error("usage: miilo [--endpoint URL] [--token TOKEN] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+  throw new Error("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <doctor|connections list|work list|work show|work explain|watch>");
 }
 
 export function validateTarget(value: string): [string, string] {

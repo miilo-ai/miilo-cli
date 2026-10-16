@@ -13,6 +13,13 @@ pub struct Args {
     pub endpoint: String,
     #[arg(long, env = "MIILO_TOKEN", hide_env_values = true, global = true)]
     pub token: Option<String>,
+    #[arg(
+        long,
+        env = "MIILO_TOKEN_FILE",
+        conflicts_with = "token",
+        global = true
+    )]
+    pub token_file: Option<std::path::PathBuf>,
     #[arg(long, global = true)]
     pub json: bool,
     #[command(subcommand)]

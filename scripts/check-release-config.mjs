@@ -1,0 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
+const root = new URL('../', import.meta.url);
+const metadata = readFileSync(new URL('Cargo.toml', root), 'utf8');
+const workflow = readFileSync(new URL('.github/workflows/release.yml', root), 'utf8') + '\n' + readFileSync(new URL('.github/workflows/publish-homebrew.yml', root), 'utf8');
+const tap = metadata.match(/^tap\s*=\s*"([^"]+)"/m)?.[1];
+const repositories = [...workflow.matchAll(/^\s+repository:\s*["']?([^"'\s]+)["']?\s*(?:#.*)?$/gm)].map(match => match[1]);
+if (!tap || !repositories.includes(tap)) throw new Error('Release workflow tap does not match Cargo metadata');
+const app = readFileSync(new URL('crates/miilo-cli/Cargo.toml', root), 'utf8');
+if (!/^formula\s*=\s*"miilo"/m.test(app)) throw new Error('Homebrew formula must match the documented miilo command');
+console.log('Release tap and formula configuration agree.');

@@ -1,4 +1,5 @@
 mod args;
+mod credentials;
 mod output;
 
 use args::{Args, Command, ConnectionsCommand, WorkCommand, parse_target};
@@ -22,7 +23,11 @@ struct DoctorReport<'a> {
 #[tokio::main]
 async fn main() -> ExitCode {
     let args = Args::parse();
-    let client = match MiiloClient::new(&args.endpoint, args.token.clone()) {
+    let token = match credentials::resolve(args.token.clone(), args.token_file.as_deref()) {
+        Ok(token) => token,
+        Err(error) => return fail(error),
+    };
+    let client = match MiiloClient::new(&args.endpoint, token) {
         Ok(client) => client,
         Err(error) => return fail(error),
     };

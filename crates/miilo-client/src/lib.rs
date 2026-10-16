@@ -31,13 +31,22 @@ impl MiiloClient {
                 endpoint.scheme().to_owned(),
             ));
         }
+        if !endpoint.username().is_empty()
+            || endpoint.password().is_some()
+            || endpoint.query().is_some()
+            || endpoint.fragment().is_some()
+        {
+            return Err(ClientError::UnsafeEndpoint);
+        }
         if !endpoint.path().ends_with('/') {
             endpoint.set_path(&format!("{}/", endpoint.path()));
         }
         Ok(Self {
             endpoint,
             bearer_token,
-            http: reqwest::Client::builder().build()?,
+            http: reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?,
         })
     }
 
@@ -73,7 +82,7 @@ impl MiiloClient {
             request = request.header("last-event-id", cursor);
         }
         let response = request.send().await?;
-        let response = ensure_success(response).await?;
+        let response = ensure_success(response, self.bearer_token.as_deref()).await?;
         let content_type = response
             .headers()
             .get(reqwest::header::CONTENT_TYPE)
@@ -94,7 +103,7 @@ impl MiiloClient {
         &self,
         request: RequestBuilder,
     ) -> Result<T, ClientError> {
-        ensure_success(request.send().await?)
+        ensure_success(request.send().await?, self.bearer_token.as_deref())
             .await?
             .json()
             .await
@@ -109,7 +118,10 @@ impl MiiloClient {
     }
 }
 
-async fn ensure_success(response: reqwest::Response) -> Result<reqwest::Response, ClientError> {
+async fn ensure_success(
+    response: reqwest::Response,
+    token: Option<&str>,
+) -> Result<reqwest::Response, ClientError> {
     if response.status().is_success() {
         return Ok(response);
     }
@@ -122,7 +134,7 @@ async fn ensure_success(response: reqwest::Response) -> Result<reqwest::Response
     });
     Err(ClientError::Http {
         status: status.as_u16(),
-        message,
+        message: redact_credential(message, token),
     })
 }
 
@@ -144,4 +156,24 @@ pub fn is_snapshot_required(error: &ClientError) -> bool {
             ..
         } if *status == 409
     )
+}
+
+fn redact_credential(message: String, token: Option<&str>) -> String {
+    match token.filter(|value| !value.is_empty()) {
+        Some(token) => message.replace(token, "[redacted]"),
+        None => message,
+    }
+}
+
+#[cfg(test)]
+mod credential_errors {
+    #[test]
+    fn remote_errors_cannot_echo_the_configured_credential() {
+        let message = super::redact_credential(
+            "Rejected secret-token; header Bearer secret-token".into(),
+            Some("secret-token"),
+        );
+        assert!(!message.contains("secret-token"));
+        assert!(message.contains("Rejected"));
+    }
 }

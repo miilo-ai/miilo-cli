@@ -43,3 +43,12 @@
 ## Repository responsibility
 
 The executable parses commands and composes adapters. Local application orchestration depends on discovery, transcript, clock, configuration/cache, lifecycle and wakeup ports. Native and Node frontends consume stable public contracts.
+
+## Automated boundary gate
+
+Run `python3 tools/check_architecture.py` and `python3 tools/test_architecture.py`.
+The architecture workflow enforces `.specify/architecture.json`. Existing size
+exceptions are explicit, bounded debt and cannot grow. Do not expand exceptions
+to bypass a failing refactor. These source checks supplement behavioral tests.
+
+Release qualification also runs the architecture gate before reporting readiness.

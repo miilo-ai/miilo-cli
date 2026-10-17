@@ -129,3 +129,10 @@ See [.github/RELEASING.md](.github/RELEASING.md) for private-repository rehearsa
 `reason: bootstrap|event`, and an authoritative `snapshot`. This replaces the
 old raw-event watch output. Library consumers needing raw resumable events can
 still call `MiiloClient.stream`; `observe` provides reconciled snapshots.
+
+## Architecture checks
+
+The [engineering constitution](.specify/memory/constitution.md) defines the
+boundaries. Run `python3 tools/check_architecture.py` and
+`python3 tools/test_architecture.py`; CI qualification runs both. These are
+development checks, not runtime dependencies.

@@ -1,5 +1,8 @@
 //! Standalone observation engine. Remote CE publication is an explicit legacy adapter.
+pub mod application;
+pub mod domain;
 #[cfg(unix)]
+#[path = "adapters/native/mod.rs"]
 mod engine;
 #[cfg(unix)]
 pub use engine::execute;
@@ -8,16 +11,13 @@ pub async fn execute(_: &[String]) -> Result<(), String> {
     Err("Local transcript observation currently requires Linux or macOS; remote Miilo commands work on this platform.".into())
 }
 #[cfg(unix)]
-mod codex {
-    pub mod discovery;
-    pub mod transcript;
-}
+#[path = "adapters/codex/mod.rs"]
+mod codex;
 #[cfg(unix)]
-mod cursor {
-    pub mod discovery;
-    pub mod transcript;
-}
+#[path = "adapters/cursor/mod.rs"]
+mod cursor;
 #[cfg(unix)]
+#[path = "adapters/transcript.rs"]
 mod transcript;
 
 /// Read-only infrastructure adapters. Callers own explicit consent and path selection.

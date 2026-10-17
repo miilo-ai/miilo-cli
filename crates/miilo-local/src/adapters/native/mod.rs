@@ -15,6 +15,7 @@ mod groups;
 mod import_flow;
 mod inventory;
 mod local_run;
+mod observation_ports;
 mod remote_run;
 mod selection;
 mod service;

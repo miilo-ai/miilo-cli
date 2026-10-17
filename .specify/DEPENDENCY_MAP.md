@@ -6,7 +6,7 @@ SDK contracts + optional Rust runtime
   └─ CE memory/HTTP/auth adapters → optional remote clients
 ```
 
-Runtime source pin: SDK 1fccba94eb2c125408906d26c0ec688be9a68a4a.
+Runtime source pins are recorded in each consuming Cargo manifest and lockfile.
 Candidate versions: SDK/CLI/CE 0.2.0, widget helper 1.4.0; protocol 0.1.
 All coordinated work is on codex/standalone-runtime. Exact tested source revisions
 and artifact digests are recorded in repository evidence; never infer them from

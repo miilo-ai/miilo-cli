@@ -1,5 +1,7 @@
+use super::observation_ports::{FileSnapshot, SystemClock};
 use super::*;
-use miilo_adapter_sdk::{ObservatorySnapshot, runtime::ObservatoryRuntime};
+use crate::application::{collector::Collector, ports::ObservationSource};
+use miilo_adapter_sdk::ObservatorySnapshot;
 pub(super) fn read_snapshot() -> Result<ObservatorySnapshot> {
     let config: Value = serde_json::from_str(&private_read(&config_path())?)
         .map_err(|_| "Invalid local configuration")?;
@@ -12,20 +14,6 @@ pub(super) fn read_snapshot() -> Result<ObservatorySnapshot> {
         return Err("Local observation is stale; start miilo local run".into());
     }
     Ok(snapshot)
-}
-fn project(session: &sessions::Session) -> Result<ObservatorySnapshot> {
-    let state = &session.observation;
-    let recent = chrono::DateTime::parse_from_rfc3339(&state.observed_at).is_ok_and(|at| {
-        (0..120).contains(&(chrono::Utc::now() - at.with_timezone(&chrono::Utc)).num_seconds())
-    });
-    let mut snapshot =
-        serde_json::to_value(state.snapshot().map_err(|_| "Cannot project observation")?)
-            .map_err(|_| "Cannot encode observation")?;
-    snapshot["workItems"][0]["revision"] = json!(state.cursor(state.revision));
-    snapshot["providers"][0]["extensions"]["dev.miilo.groups"] = session.groups.clone();
-    snapshot["actors"] = json!([{"id":"session-agent","providerId":state.provider_id,"kind":"agent","name":state.title,"health":if state.error.is_some(){"unreachable"}else{"healthy"},"status":if state.error.is_some(){"offline"}else if state.state=="active"&&recent{"working"}else{"resting"},"capabilities":[],"updatedAt":state.observed_at,"extensions":{"dev.miilo.session":{"runtimeStatusAuthoritative":false}}}]);
-    snapshot["attempts"] = json!([{"id":"observed-session","providerId":state.provider_id,"taskId":state.thread_id,"sequence":1,"lifecycle":state.state,"phase":"unknown","actorIds":["session-agent"],"startedAt":state.observed_at,"completedAt":null,"summary":"Observed existing session; execution status is not authoritative","extensions":null}]);
-    serde_json::from_value(snapshot).map_err(|_| "Cannot decode observation".into())
 }
 pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
     if config["version"] != 2 || config["mode"] != "local" {
@@ -47,27 +35,17 @@ pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
     } else {
         Some(wakeups::Wakeups::new(&config)?)
     };
-    let mut runtime = ObservatoryRuntime::new(
-        format!(
-            "local-{}-{}",
-            std::process::id(),
-            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
-        ),
-        512,
-    )
+    let mut collector = Collector::new(format!(
+        "local-{}-{}",
+        std::process::id(),
+        chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+    ))
     .map_err(|e| e.to_string())?;
     for session in &mut selected {
         if session.tail.read(&mut session.observation).is_err() {
             session.observation.error = Some("Selected transcript unavailable".into());
         }
         session.observation.state = "waiting";
-        runtime
-            .register(
-                serde_json::from_value(session.observation.descriptor())
-                    .map_err(|_| "Invalid local descriptor")?,
-                chrono::Utc::now(),
-            )
-            .map_err(|e| e.to_string())?;
     }
     let mut next_discovery = tokio::time::Instant::now() + Duration::from_secs(60);
     loop {
@@ -112,13 +90,6 @@ pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
                         continue;
                     }
                     session.observation.state = "waiting";
-                    runtime
-                        .register(
-                            serde_json::from_value(session.observation.descriptor())
-                                .map_err(|_| "Invalid local descriptor")?,
-                            chrono::Utc::now(),
-                        )
-                        .map_err(|e| e.to_string())?;
                     if let Some(wakeups) = &mut wakeups {
                         wakeups.watch(Path::new(
                             item["path"].as_str().ok_or("Missing selected transcript")?,
@@ -130,36 +101,11 @@ pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
                 }
             }
         }
-        for session in &mut selected {
-            if session.tail.read(&mut session.observation).is_err() {
-                session.observation.error =
-                    Some("Selected transcript unavailable; reconnect explicitly".into());
-            }
-            let snapshot = project(session)?;
-            runtime
-                .replace(
-                    &session.observation.provider_id,
-                    snapshot,
-                    chrono::Utc::now(),
-                )
-                .map_err(|e| e.to_string())?;
-        }
-        let mut snapshot = runtime.snapshot(chrono::Utc::now());
-        let explanations: Vec<_> = snapshot
-            .work_items
-            .iter()
-            .filter_map(|w| {
-                miilo_adapter_sdk::runtime::explain(&snapshot, &w.provider_id, &w.id).ok()
-            })
+        let mut sources: Vec<&mut dyn ObservationSource> = selected
+            .iter_mut()
+            .map(|s| s as &mut dyn ObservationSource)
             .collect();
-        snapshot.extensions = Some(serde_json::Map::from_iter([(
-            "dev.miilo.explanations".into(),
-            serde_json::to_value(explanations).map_err(|_| "Cannot encode explanations")?,
-        )]));
-        save_config(
-            &cache,
-            &serde_json::to_value(snapshot).map_err(|_| "Cannot serialize snapshot")?,
-        )?;
+        collector.collect(&mut sources, &SystemClock, &mut FileSnapshot(cache.clone()))?;
         if once {
             return Ok(());
         }

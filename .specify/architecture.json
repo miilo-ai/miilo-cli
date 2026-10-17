@@ -1,0 +1,23 @@
+{
+  "layers": [
+    {
+      "name": "local-core",
+      "paths": [
+        "crates/miilo-local/src/application/**/*.rs",
+        "crates/miilo-local/src/domain/**/*.rs"
+      ],
+      "forbid": [
+        "\\b(?:axum|reqwest|sqlx|notify|tempfile)::",
+        "std::(?:fs|net|process|thread)",
+        "\\bSystemTime\\b",
+        "Utc::now\\(",
+        "crate::(?:adapters|config|engine|transport)::",
+        "\\buse\\s+super::\\*",
+        "\\b(?:fs|env|process|thread)::",
+        "Uuid::new_v4\\(",
+        "Instant::now\\("
+      ]
+    }
+  ],
+  "existingSizeExceptions": {}
+}

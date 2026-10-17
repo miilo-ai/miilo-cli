@@ -47,14 +47,17 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
             kind,
             item["name"].as_str().unwrap_or("Local session")
         );
+        let mut observation = Observation::new(
+            &provider_id(kind, id),
+            &name,
+            &format!("{kind}_transcript"),
+            item,
+        );
+        // Enrollment or collector restart is not session activity.
+        observation.observed_at = "1970-01-01T00:00:00Z".into();
         out.push(Session {
             groups: item["groups"].clone(),
-            observation: Observation::new(
-                &provider_id(kind, id),
-                &name,
-                &format!("{kind}_transcript"),
-                item,
-            ),
+            observation,
             tail,
         });
     }

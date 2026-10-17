@@ -199,7 +199,16 @@ pub(super) async fn run(once: bool) -> Result<()> {
                 (0..120)
                     .contains(&(chrono::Utc::now() - at.with_timezone(&chrono::Utc)).num_seconds())
             });
-            let revision = (state.revision, state.error.is_some(), recent);
+            let recently_active = crate::domain::session_visibility::recently_observed(
+                &state.observed_at,
+                chrono::Utc::now(),
+            );
+            let revision = (
+                state.revision,
+                state.error.is_some(),
+                recent,
+                recently_active,
+            );
             if registered && revisions.get(&id) == Some(&revision) {
                 continue;
             }
@@ -207,7 +216,7 @@ pub(super) async fn run(once: bool) -> Result<()> {
             let mut snapshot =
                 serde_json::to_value(snapshot).map_err(|_| "Cannot serialize observation")?;
             snapshot["providers"][0]["extensions"]["dev.miilo.groups"] = session.groups.clone();
-            snapshot["actors"] = json!([{"id":"session-agent","providerId":id,"kind":"agent","name":state.title,"health":if state.error.is_some(){"unreachable"}else{"healthy"},"status":if state.error.is_some(){"offline"}else if state.state=="active" && recent {"working"}else{"resting"},"capabilities":[],"updatedAt":state.observed_at,"extensions":{"dev.miilo.session":{"runtimeStatusAuthoritative":false}}}]);
+            snapshot["actors"] = json!([{"id":"session-agent","providerId":id,"kind":"agent","name":state.title,"health":if state.error.is_some(){"unreachable"}else{"healthy"},"status":if state.error.is_some(){"offline"}else if state.state=="active" && recent {"working"}else{"resting"},"capabilities":[],"updatedAt":state.observed_at,"extensions":{"dev.miilo.session":{"runtimeStatusAuthoritative":false,"recentlyActive":recently_active}}}]);
             snapshot["attempts"] = json!([{"id":"observed-session","providerId":id,"taskId":state.thread_id,"sequence":1,"lifecycle":state.state,"phase":"unknown","actorIds":["session-agent"],"startedAt":state.observed_at,"completedAt":null,"summary":"Observed existing session; execution status is not authoritative","extensions":null}]);
             let response = client
                 .put(format!("{endpoint}/v1/providers/{id}/snapshot"))

@@ -31,7 +31,7 @@
     "test:native": "npm run build && node --test test/archive.integration.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.18.10",
-    "typescript": "^5.9.3"
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
   }
 }

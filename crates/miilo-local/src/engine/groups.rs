@@ -98,6 +98,51 @@ pub fn matches(rule: &Value, session: &Value) -> bool {
                 .file_name()
                 .is_some_and(|name| wildcard(pattern, &name.to_string_lossy())))
 }
+/// A discovery window is not a complete historical inventory. Unknown creation
+/// times can never authorize future enrollment of an unseen existing session.
+pub(super) fn future_matches(rule: &Value, session: &Value) -> bool {
+    if rule["future"] != true || !matches(rule, session) {
+        return false;
+    }
+    let Some(cutoff) = rule["enrolledAfter"]
+        .as_str()
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+    else {
+        return false;
+    };
+    let created = session["createdAt"]
+        .as_i64()
+        .and_then(|n| chrono::DateTime::from_timestamp(n, 0))
+        .or_else(|| {
+            session["createdAt"]
+                .as_str()
+                .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                .map(|v| v.with_timezone(&chrono::Utc))
+        });
+    created.is_some_and(|at| {
+        at > cutoff.with_timezone(&chrono::Utc)
+            && at <= chrono::Utc::now() + chrono::Duration::seconds(5)
+    })
+}
+pub(super) fn bind_consent(rules: &mut [Value], previous: &Value) {
+    for rule in rules {
+        let existing = previous.as_array().into_iter().flatten().find(|old| {
+            old["name"] == rule["name"]
+                && old["folder"] == rule["folder"]
+                && old["pattern"] == rule["pattern"]
+                && old["kind"] == rule["kind"]
+                && old["future"] == true
+        });
+        rule["enrolledAfter"] = if rule["future"] == true {
+            existing
+                .and_then(|old| old["enrolledAfter"].as_str())
+                .map(|s| json!(s))
+                .unwrap_or_else(|| json!(chrono::Utc::now().to_rfc3339()))
+        } else {
+            Value::Null
+        };
+    }
+}
 pub fn preview(sessions: &[Value], rules: &[Value]) -> Value {
     let mut groups: Vec<Value> = rules
         .iter()
@@ -197,60 +242,5 @@ pub async fn execute() -> Result<()> {
     Ok(())
 }
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn patterns_are_literal_except_star_and_question_mark() {
-        assert!(wildcard("vave-*", "vave-ai"));
-        assert!(wildcard("miilo-?e", "miilo-ce"));
-        assert!(!wildcard("vave-*", "miilo-ce"));
-        assert!(!wildcard("[ab]", "a"));
-        assert!(wildcard("*", ""));
-        assert!(!wildcard("?", ""));
-    }
-    #[test]
-    fn folders_are_scoped_and_nested_projects_match() {
-        let temporary = tempfile::tempdir().unwrap();
-        let base = fs::canonicalize(temporary.path()).unwrap();
-        let work = base.join("Work");
-        let project = work.join("vave-ai/src");
-        let other = base.join("Work-other/vave-ai");
-        fs::create_dir_all(&project).unwrap();
-        fs::create_dir_all(&other).unwrap();
-        let rule =
-            json!({"name":"Vave","folder":work,"pattern":"vave-*","kind":"codex","future":false});
-        assert!(validate(&json!([rule.clone()])).is_ok());
-        let session = json!({"kind":"codex","observable":true,"cwd":project});
-        assert!(matches(&rule, &session));
-        assert!(!matches(
-            &rule,
-            &json!({"cwd":other,"kind":"codex","observable":true})
-        ));
-        let link = work.join("vave-link");
-        std::os::unix::fs::symlink(&other, &link).unwrap();
-        assert!(!matches(
-            &rule,
-            &json!({"cwd":link,"kind":"codex","observable":true})
-        ));
-        let encoded = project
-            .to_string_lossy()
-            .trim_start_matches('/')
-            .replace('/', "-");
-        assert_eq!(cursor_workspace(&work, &encoded), Some(project.clone()));
-        assert_eq!(cursor_workspace(&other, &encoded), None);
-        assert!(!matches(
-            &rule,
-            &json!({"cwd":project,"kind":"cursor","observable":true})
-        ));
-        assert!(!matches(
-            &rule,
-            &json!({"cwd":project,"kind":"codex","observable":false})
-        ));
-        assert!(validate(&json!([rule.clone(), rule.clone()])).is_err());
-        let preview = preview(&[session], &[rule]);
-        assert_eq!(
-            preview["groups"][0]["sessions"].as_array().unwrap().len(),
-            1
-        );
-    }
-}
+#[path = "groups_tests.rs"]
+mod tests;

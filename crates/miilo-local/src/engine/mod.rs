@@ -31,6 +31,10 @@ pub async fn execute(args: &[String]) -> Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| home()));
     match args.first().map(String::as_str) {
+        Some("--version") => {
+            println!("miilo-local {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
         Some("discover") => {
             let mut found = inventory(&directory).await;
             if let Ok(text) = private_read(&config_path()) {
@@ -52,6 +56,33 @@ pub async fn execute(args: &[String]) -> Result<()> {
                 remote_run::run(once).await
             } else {
                 local_run::run(config, once).await
+            }
+        }
+        Some("doctor") => {
+            let config: Value = serde_json::from_str(&private_read(&config_path())?)
+                .map_err(|_| "Invalid local configuration")?;
+            if config["version"] == 1 {
+                println!(
+                    "{}",
+                    json!({"mode":"remote","configurationVersion":1,"selectedSessions":config["sessions"].as_array().map_or(0,Vec::len),"message":"Legacy CE publication configuration; use explicit remote doctor for API health"})
+                );
+                return Ok(());
+            }
+            match local_run::read_snapshot() {
+                Ok(snapshot) => {
+                    println!(
+                        "{}",
+                        json!({"mode":"local","configurationVersion":2,"readOnly":true,"status":if snapshot.providers.iter().all(|p|p.health==miilo_adapter_sdk::Health::Healthy){"current"}else{"degraded"},"selectedSessions":config["sessions"].as_array().map_or(0,Vec::len),"providers":snapshot.providers.len(),"workItems":snapshot.work_items.len(),"observedAt":snapshot.observed_at})
+                    );
+                    Ok(())
+                }
+                Err(error) => {
+                    println!(
+                        "{}",
+                        json!({"mode":"local","status":"unavailable","message":error})
+                    );
+                    Err("Standalone observation is unavailable".into())
+                }
             }
         }
         Some("snapshot") => {
@@ -78,7 +109,7 @@ pub async fn execute(args: &[String]) -> Result<()> {
         }
         _ => {
             println!(
-                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | run [--once] | snapshot | explain <provider>/<work>"
+                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | run [--once] | doctor | snapshot | explain <provider>/<work>"
             );
             Ok(())
         }

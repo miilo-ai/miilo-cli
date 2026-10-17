@@ -10,10 +10,19 @@ import urllib.error
 import urllib.request
 
 
+def pinned_reference(dependency):
+    if dependency.get('git') != 'https://github.com/miilo-ai/miilo-sdk':
+        raise ValueError('canonical SDK repository required')
+    tag, revision=dependency.get('tag'), dependency.get('rev')
+    if bool(tag)==bool(revision):raise ValueError('exactly one SDK tag or revision is required')
+    if revision and not re.fullmatch(r'[a-f0-9]{40}',revision):raise ValueError('SDK revision must be a full commit SHA')
+    if tag and not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?',tag):raise ValueError('SDK tag must be versioned')
+    return revision or tag
+
+
 def main():
     dependency = tomllib.loads(Path('Cargo.toml').read_text())['workspace']['dependencies']['miilo-adapter-sdk']
-    if dependency.get('git') != 'https://github.com/miilo-ai/miilo-sdk' or not (dependency.get('tag') or re.fullmatch(r'[a-f0-9]{40}', dependency.get('rev', ''))):
-        raise ValueError('a canonical tag or full commit SDK dependency is required')
+    pinned_reference(dependency)
     token = os.environ.get('SDK_READ_TOKEN', '')
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'miilo-release-check'}
     if token:

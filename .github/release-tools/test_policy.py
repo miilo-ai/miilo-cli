@@ -65,6 +65,12 @@ class PolicyTests(unittest.TestCase):
             subprocess.run(['git', '-C', directory, 'tag', 'v0.1.0'], check=True)
             self.assertEqual(version.candidate(root, ['v0.1.0'])['new_version'], 'false')
 
+    def test_sdk_commit_pins_are_exact_unambiguous_and_canonical(self):
+        base={'git':'https://github.com/miilo-ai/miilo-sdk'}
+        self.assertEqual(sdk_access.pinned_reference(base|{'rev':'a'*40}),'a'*40)
+        for change in [{},{'rev':'main'},{'rev':'a'*40,'tag':'v0.1.0'},{'tag':'main'},{'git':'https://example.invalid/sdk','rev':'a'*40}]:
+            with self.assertRaises(ValueError):sdk_access.pinned_reference(base|change)
+
     def test_private_sdk_without_cross_repo_token_skips(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)/'output'

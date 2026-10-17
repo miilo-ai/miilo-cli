@@ -37,6 +37,14 @@ pub(super) async fn run(once: bool) -> Result<()> {
     );
     let token_path = token_path_owned.as_path();
     let group_rules = groups::validate(&config["groups"])?;
+    if group_rules
+        .iter()
+        .any(|rule| rule["future"] == true && rule["enrolledAfter"].is_null())
+    {
+        eprintln!(
+            "Future enrollment is paused for legacy rules without creation-time consent; selected sessions remain observed."
+        );
+    }
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(8))
@@ -110,11 +118,7 @@ pub(super) async fn run(once: bool) -> Result<()> {
                 .as_array()
                 .into_iter()
                 .flatten()
-                .filter(|s| {
-                    group_rules
-                        .iter()
-                        .any(|r| r["future"] == true && groups::matches(r, s))
-                })
+                .filter(|s| group_rules.iter().any(|r| groups::future_matches(r, s)))
                 .filter(|s| {
                     let key = format!(
                         "{}:{}",
@@ -172,7 +176,7 @@ pub(super) async fn run(once: bool) -> Result<()> {
         if !existing.status().is_success() {
             return Err("CE rejected connection discovery; check access".into());
         }
-        let existing: Value = existing.json().await.map_err(|_| "Invalid CE response")?;
+        let existing: Value = read_json(existing).await?;
         for session in &mut selected {
             let state = &mut session.observation;
             let id = state.provider_id.clone();
@@ -244,4 +248,19 @@ pub(super) async fn run(once: bool) -> Result<()> {
         }
         tokio::select! { _=tokio::time::sleep(Duration::from_secs(2))=>{}, _=tokio::signal::ctrl_c()=>return Ok(()) }
     }
+}
+
+async fn read_json(mut response: reqwest::Response) -> Result<Value> {
+    let mut data = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| "Cannot read CE response")?
+    {
+        if data.len() + chunk.len() > 2_000_000 {
+            return Err("CE response exceeds local observer limit".into());
+        }
+        data.extend_from_slice(&chunk);
+    }
+    serde_json::from_slice(&data).map_err(|_| "Invalid CE response".into())
 }

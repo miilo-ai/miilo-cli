@@ -50,11 +50,12 @@ pub(super) async fn apply(request: Value) -> Result<Value> {
     if combined.len() > 100 {
         return Err("At most 100 selected sessions".into());
     }
-    let rules = if request.get("groups").is_some() {
+    let mut rules = if request.get("groups").is_some() {
         rules
     } else {
         groups::validate(&old["groups"])?
     };
+    groups::bind_consent(&mut rules, &old["groups"]);
     for session in &mut combined {
         session["groups"] = json!(groups::labels(session, &rules));
     }

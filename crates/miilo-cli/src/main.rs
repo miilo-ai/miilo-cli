@@ -22,6 +22,22 @@ struct DoctorReport<'a> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    let values: Vec<String> = std::env::args().skip(1).collect();
+    let local_index = if values.first().is_some_and(|v| v == "local") {
+        Some(0)
+    } else if values.first().is_some_and(|v| v == "--json")
+        && values.get(1).is_some_and(|v| v == "local")
+    {
+        Some(1)
+    } else {
+        None
+    };
+    if let Some(index) = local_index {
+        return match miilo_local::execute(&values[index + 1..]).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => fail(error),
+        };
+    }
     let args = Args::parse();
     if let Command::Local { args: local_args } = &args.command {
         return match miilo_local::execute(local_args).await {
@@ -160,7 +176,7 @@ async fn watch(client: &MiiloClient, json: bool) -> Result<(), Box<dyn std::erro
                 item = stream.next() => match item {
                     Some(Ok(event)) => {
                         backoff = Duration::from_secs(1);
-                        if json { output::json_line(&event)?; } else {
+                        if json { output::json_line(&serde_json::json!({"type":"snapshot","reason":event.reason,"snapshot":event.snapshot}))?; } else {
                             println!("{}: {} providers, {} work items",event.reason,event.snapshot.providers.len(),event.snapshot.work_items.len());
                             output::work(&event.snapshot.work_items);
                         }

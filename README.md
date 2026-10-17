@@ -14,6 +14,7 @@ miilo local discover /path/to/project
 miilo local setup /path/to/project
 miilo local run
 # In another terminal:
+miilo local doctor
 miilo local snapshot
 miilo local explain PROVIDER/WORK_ID
 ```
@@ -123,3 +124,8 @@ For the release-to-VM checklist, see [Omarchy acceptance](docs/OMARCHY.md). Comm
 ## Release automation
 
 See [.github/RELEASING.md](.github/RELEASING.md) for private-repository rehearsals, manifest-driven tags, credential-missing skips and activation. Publication stays disabled until explicitly requested/configured.
+
+`watch --json` in candidate 0.2 emits NDJSON records with `type: snapshot`,
+`reason: bootstrap|event`, and an authoritative `snapshot`. This replaces the
+old raw-event watch output. Library consumers needing raw resumable events can
+still call `MiiloClient.stream`; `observe` provides reconciled snapshots.

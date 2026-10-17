@@ -6,7 +6,7 @@ pub(super) async fn inventory(directory: &Path) -> Value {
     match discovery::discover(Path::new(&executable), None).await {
         Ok(result) => {
             for thread in result["data"].as_array().into_iter().flatten() {
-                sessions.push(json!({"kind":"codex","id":thread["id"],"name":thread["name"],"cwd":thread["cwd"],"updatedAt":thread["updatedAt"],"observable":true}));
+                sessions.push(json!({"kind":"codex","id":thread["id"],"name":thread["name"],"cwd":thread["cwd"],"updatedAt":thread["updatedAt"],"createdAt":thread["createdAt"],"observable":true}));
             }
         }
         Err(_) => errors.push("Codex discovery unavailable"),
@@ -22,7 +22,7 @@ pub(super) async fn inventory(directory: &Path) -> Value {
                         directory,
                         item["workspace"].as_str().unwrap_or(""),
                     );
-                    sessions.push(json!({"kind":"cursor","id":item["id"],"name":item["workspace"],"cwd":cwd.map(|p|json!(p)).unwrap_or(item["workspace"].clone()),"updatedAt":item["updatedAt"],"observable":true}));
+                    sessions.push(json!({"kind":"cursor","id":item["id"],"name":item["workspace"],"cwd":cwd.map(|p|json!(p)).unwrap_or(item["workspace"].clone()),"updatedAt":item["updatedAt"],"createdAt":item["createdAt"],"observable":true}));
                 }
             }
             Err(_) => errors.push("Cursor discovery unavailable"),

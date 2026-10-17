@@ -36,7 +36,7 @@ pub fn sessions(root: &Path) -> Result<Vec<Value>, String> {
             };
             let updated = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
             let workspace = project.file_name().to_string_lossy().into_owned();
-            candidates.push((updated,json!({"id":id,"workspace":workspace,"path":file,"updatedAt":chrono::DateTime::<chrono::Utc>::from(updated).to_rfc3339()})));
+            candidates.push((updated,json!({"id":id,"workspace":workspace,"path":file,"updatedAt":chrono::DateTime::<chrono::Utc>::from(updated).to_rfc3339(),"createdAt":metadata.created().ok().map(|value|chrono::DateTime::<chrono::Utc>::from(value).to_rfc3339())})));
             candidates.sort_by_key(|(time, _)| std::cmp::Reverse(*time));
             candidates.truncate(100);
         }

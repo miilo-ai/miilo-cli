@@ -56,6 +56,9 @@ for target in os.environ['TARGETS'].split(','):
                 result=subprocess.run([str(binary),'--endpoint',endpoint,'--token-file',str(token),'--json','doctor'],env=env,capture_output=True,text=True,timeout=15,check=True)
                 assert json.loads(result.stdout)['health']['ok'] is True
                 assert 'smoke-token' not in result.stdout+result.stderr
+                if os.name!='nt' and os.environ.get('MIILO_OWL_BINARY'):
+                    env['MIILO_LOCAL_BINARY']=str(local_binaries[0])
+                    subprocess.run([sys.executable,'scripts/test-local-widget.py'],env=env,check=True,timeout=30)
             finally:
                 server.terminate();server.wait(timeout=5)
         print('Installed archive accepted:',archives[0].name)

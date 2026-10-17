@@ -71,13 +71,14 @@ export class MiiloClient {
     const deadline=setTimeout(()=>controller.abort(),15_000);
     let response: Response;
     try { response=await fetch(new URL("v1/stream", this.endpoint),{headers,redirect:"error",signal:controller.signal}); }
-    finally { clearTimeout(deadline); }
-    await ensureSuccess(response, this.token);
+    catch(error){clearTimeout(deadline);controller.abort();throw error;}
+    try { await ensureSuccess(response, this.token); } catch(error){controller.abort();throw error;} finally{clearTimeout(deadline);}
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.startsWith("text/event-stream")) {
+      controller.abort();
       throw new Error(`Miilo returned ${contentType || "an unknown content type"} instead of text/event-stream`);
     }
-    if (!response.body) throw new Error("Miilo returned an empty event stream");
+    if (!response.body) {controller.abort();throw new Error("Miilo returned an empty event stream");}
     return {events:decodeSse(readBody(response.body,controller)),cancel:()=>controller.abort()};
   }
 

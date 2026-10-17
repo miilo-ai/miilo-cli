@@ -84,11 +84,7 @@ pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
                 .as_array()
                 .into_iter()
                 .flatten()
-                .filter(|s| {
-                    rules
-                        .iter()
-                        .any(|r| r["future"] == true && groups::matches(r, s))
-                })
+                .filter(|s| rules.iter().any(|r| groups::future_matches(r, s)))
                 .filter(|s| {
                     let key = format!(
                         "{}:{}",

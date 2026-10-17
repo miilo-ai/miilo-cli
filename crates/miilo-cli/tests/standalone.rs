@@ -7,6 +7,13 @@ use std::{
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
+struct Observer(std::process::Child);
+impl Drop for Observer {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
 const ID: &str = "11111111-1111-1111-1111-111111111111";
 fn command(home: &std::path::Path) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_miilo-local"));
@@ -57,13 +64,28 @@ fn import_observe_update_explain_and_stale_without_ce_or_account() {
         0
     );
     let snapshot_file = std::path::Path::new(saved["snapshotFile"].as_str().unwrap());
-    let mut observer = command(&home)
-        .arg("run")
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    std::thread::sleep(Duration::from_millis(150));
+    let baseline: Value = serde_json::from_slice(&fs::read(snapshot_file).unwrap()).unwrap();
+    let mut observer = Observer(
+        command(&home)
+            .arg("run")
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    let readiness = Instant::now() + Duration::from_secs(8);
+    loop {
+        let current: Value = serde_json::from_slice(&fs::read(snapshot_file).unwrap()).unwrap();
+        if current["snapshotId"] != baseline["snapshotId"] {
+            break;
+        }
+        assert!(
+            Instant::now() < readiness,
+            "observer failed to publish its bootstrap"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
     let mut transcript = fs::OpenOptions::new().append(true).open(&file).unwrap();
     writeln!(transcript,"{}",json!({"role":"assistant","message":{"content":[{"type":"text","text":"Checking the deployment"},{"type":"tool_use","name":"test","input":{"secret":"PRIVATE_TOOL_INPUT"}}]}})).unwrap();
     transcript.flush().unwrap();
@@ -76,6 +98,7 @@ fn import_observe_update_explain_and_stale_without_ce_or_account() {
         assert!(Instant::now() < deadline, "observer did not ingest update");
         std::thread::sleep(Duration::from_millis(100));
     };
+    assert_eq!(snapshot["actors"][0]["status"], "working");
     let encoded = snapshot.to_string();
     assert!(!encoded.contains("PRIVATE_USER_INPUT"));
     assert!(!encoded.contains("PRIVATE_TOOL_INPUT"));
@@ -101,8 +124,8 @@ fn import_observe_update_explain_and_stale_without_ce_or_account() {
             .iter()
             .any(|s| s.as_str().unwrap().contains("No verification"))
     );
-    observer.kill().unwrap();
-    observer.wait().unwrap();
+    observer.0.kill().unwrap();
+    observer.0.wait().unwrap();
     let mut stale = snapshot;
     stale["observedAt"] = json!("2020-01-01T00:00:00Z");
     fs::write(snapshot_file, stale.to_string()).unwrap();
@@ -123,4 +146,26 @@ fn import_observe_update_explain_and_stale_without_ce_or_account() {
             .status
             .success()
     );
+}
+
+#[test]
+fn native_local_dispatch_ignores_conflicting_remote_environment() {
+    for args in [
+        vec!["local", "--help"],
+        vec!["--json", "local", "--version"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_miilo"))
+            .args(args)
+            .env("MIILO_TOKEN", "disposable-conflict")
+            .env("MIILO_TOKEN_FILE", "/does-not-exist")
+            .env("MIILO_URL", "not-a-url")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(!String::from_utf8_lossy(&output.stdout).contains("disposable-conflict"));
+    }
 }

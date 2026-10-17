@@ -10,6 +10,7 @@ import type { ExplanationRequest, WorkItem } from "./types.js";
 
 export async function run(values = process.argv.slice(2)): Promise<void> {
   if (values[0] === "local") return runLocal(values.slice(1));
+  if (values[0] === "--json" && values[1] === "local") return runLocal(values.slice(2));
   const args = parseArguments(values);
   if (args.command.kind === "help") {
     console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <local|doctor|connections list|work list|work show|work explain|watch>");
@@ -62,7 +63,7 @@ async function watch(client: MiiloClient, json: boolean): Promise<void> {
     try {
       for await (const event of client.observe()) {
         backoff = 1000;
-        if(json)writeJson(event,true);
+        if(json)writeJson({type:"snapshot",...event},true);
         else {console.log(`${event.reason}: ${event.snapshot.providers.length} providers, ${event.snapshot.workItems.length} work items`);writeWork(event.snapshot.workItems);}
       }
     } catch (error) {

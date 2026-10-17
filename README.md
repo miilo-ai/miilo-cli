@@ -77,7 +77,7 @@ remote publication mode and are not silently migrated or overwritten.
 
 The [SDK runtime](https://github.com/miilo-ai/miilo-sdk) owns provider isolation,
 validation, aggregation, deduplication and bounded event history. CE consumes the
-same core. No private private-application checkout is required. The committed SDK
+same core. The committed SDK
 dependency pins a full source revision; private repository access is required
 until the owner makes these repositories public.
 

@@ -9,7 +9,7 @@ Rust workspace clippy passed with warnings denied. Packed npm installation/help,
 agent plugin packaging, 15 release-policy tests and workflow lint passed.
 Cargo-dist plan includes miilo and miilo-local in the Apple Silicon archive.
 Pinned remote SDK source was fetched through the existing SSH identity and built;
-no private private-application path dependency exists.
+all runtime dependencies are explicitly declared.
 
 Live current-chat Codex read-only discovery/import/snapshot passed. No natural
 update arrived during 10 seconds; do not claim that live update path was observed.

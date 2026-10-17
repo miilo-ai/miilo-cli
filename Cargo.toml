@@ -13,7 +13,7 @@ authors = ["Miilo contributors"]
 publish = false
 
 [workspace.dependencies]
-miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "faf71da1ba8053bc125f3bf34b69019c56a1bb89" }
+miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "40c2008207ae8abac2b82eeca7511ad6bf665d35" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

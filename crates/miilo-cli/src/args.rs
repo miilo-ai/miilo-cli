@@ -28,6 +28,11 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Compress, verify and restore explicitly selected artifacts locally.
+    Archive {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Observe selected local sessions without a server or account.
     Local {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]

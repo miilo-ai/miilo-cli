@@ -27,7 +27,8 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test:native": "npm run build && node --test test/archive.integration.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.18.10",

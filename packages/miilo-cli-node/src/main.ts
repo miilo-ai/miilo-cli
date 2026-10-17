@@ -9,11 +9,13 @@ import { writeConnections, writeDoctor, writeExplanation, writeJson, writeWork, 
 import type { ExplanationRequest, WorkItem } from "./types.js";
 
 export async function run(values = process.argv.slice(2)): Promise<void> {
+  if (values[0] === "archive") return runLocal(values);
+  if (values[0] === "--json" && values[1] === "archive") return runLocal(values.slice(1));
   if (values[0] === "local") return runLocal(values.slice(1));
   if (values[0] === "--json" && values[1] === "local") return runLocal(values.slice(2));
   const args = parseArguments(values);
   if (args.command.kind === "help") {
-    console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <local|doctor|connections list|work list|work show|work explain|watch>");
+    console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <archive|local|doctor|connections list|work list|work show|work explain|watch>");
     return;
   }
   const client = new MiiloClient(args.endpoint, resolveCredential(args.token, args.tokenFile));

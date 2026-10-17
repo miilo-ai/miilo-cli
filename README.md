@@ -136,3 +136,10 @@ The [engineering constitution](.specify/memory/constitution.md) defines the
 boundaries. Run `python3 tools/check_architecture.py` and
 `python3 tools/test_architecture.py`; CI qualification runs both. These are
 development checks, not runtime dependencies.
+
+## Lossless local artifacts
+
+Use `miilo archive export INPUT OUTPUT --codec zstd`, `archive inspect INPUT`,
+and `archive restore INPUT OUTPUT` without an API or account. See
+[compression and verified restore](docs/compression.md) for formats, limits,
+raw streaming commands and Node/native requirements.

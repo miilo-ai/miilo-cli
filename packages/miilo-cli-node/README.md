@@ -31,3 +31,9 @@ Remote `watch` opens a subscription before reading its initial snapshot. Every
 event causes another authoritative read; every reconnect gets a fresh baseline.
 Ordinary requests have a 15-second deadline and 2-MiB JSON limit. Error bodies
 are capped at 64 KiB; stream headers/idle reads have separate deadlines.
+
+Archive commands use the same `miilo-local archive` native implementation as the
+Rust CLI. They require the native helper on PATH or MIILO_LOCAL_EXECUTABLE, but
+never an account/API URL. Example: `miilo archive export selected.jsonl out.miilo
+--codec zstd`, followed by `miilo archive restore out.miilo restored.jsonl`.
+Existing outputs are never overwritten.

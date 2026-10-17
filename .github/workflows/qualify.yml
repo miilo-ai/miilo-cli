@@ -66,6 +66,8 @@ jobs:
 
         cargo build --workspace --locked'
       if: steps.sdk.outputs.ready == 'true'
+    - run: npm --prefix packages/miilo-cli-node run test:native
+      if: steps.sdk.outputs.ready == 'true'
     - run: scripts/smoke.sh
       if: steps.sdk.outputs.ready == 'true'
     - run: echo "ready=$READY" >> "$GITHUB_OUTPUT"

@@ -2,15 +2,8 @@ use super::*;
 pub(super) fn home() -> PathBuf {
     PathBuf::from(env::var_os("HOME").unwrap_or_default())
 }
-pub(super) fn config_path() -> PathBuf {
-    env::var_os("MIILO_LOCAL_CONFIG")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            env::var_os("XDG_CONFIG_HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|| home().join(".config"))
-                .join("miilo/local.json")
-        })
+pub(super) fn config_path() -> Result<PathBuf> {
+    super::configuration::local_path()
 }
 pub(super) fn private_read(path: &Path) -> Result<String> {
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
@@ -69,7 +62,7 @@ pub(super) fn cache_path() -> PathBuf {
 
 pub(super) fn collector_lock() -> Result<fs::File> {
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-    let path = config_path().with_extension("lock");
+    let path = config_path()?.with_extension("lock");
     let parent = path.parent().ok_or("Invalid configuration path")?;
     fs::create_dir_all(parent).map_err(|_| "Cannot create collector lock directory")?;
     let file = fs::OpenOptions::new()

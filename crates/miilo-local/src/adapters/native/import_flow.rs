@@ -19,7 +19,7 @@ pub(super) async fn apply(request: Value) -> Result<Value> {
         selection::select(&request, &available)?
     };
     let selected = selection::resolve(chosen).await?;
-    let path = config_path();
+    let path = config_path()?;
     let previous = if path.exists() {
         Some(private_read(&path)?)
     } else {

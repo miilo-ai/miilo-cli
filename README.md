@@ -143,3 +143,27 @@ Use `miilo archive export INPUT OUTPUT --codec zstd`, `archive inspect INPUT`,
 and `archive restore INPUT OUTPUT` without an API or account. See
 [compression and verified restore](docs/compression.md) for formats, limits,
 raw streaming commands and Node/native requirements.
+
+## Shared user settings
+
+The native candidate supports an explicit migration into `~/.miilo/`:
+
+```sh
+miilo config paths
+miilo config migrate
+miilo config check
+```
+
+These commands run locally, without endpoint authentication or network access.
+`miilo-local config ...` and `miilo local config ...` expose the same operation.
+Use an absolute `MIILO_HOME` to choose another user directory. No project-level
+configuration is discovered. Close older Miilo UIs before migration and restart
+updated clients afterward; old binaries continue writing their old stores.
+
+Migration preserves existing endpoint/credential formats, display preferences
+and originals. The versioned `config.json` is published last; conflicting or
+unsafe files stop migration. Existing local collector configuration remains at
+its original path, referenced by `localConfigFile`, so enrolled sessions,
+service configuration and cache locations remain intact. Environment overrides
+`MIILO_LOCAL_CONFIG` and `MIILO_OWL_CONFIG_DIR` continue to take precedence.
+Keyring conversion is not implemented by this migration.

@@ -38,6 +38,11 @@ pub enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Inspect or explicitly migrate shared ~/.miilo user settings.
+    Config {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     Doctor,
     Connections {
         #[command(subcommand)]

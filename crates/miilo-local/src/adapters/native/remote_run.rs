@@ -18,7 +18,7 @@ fn validate_endpoint(endpoint: &str) -> Result<()> {
     Ok(())
 }
 pub(super) async fn run(once: bool) -> Result<()> {
-    let mut config: Value = serde_json::from_str(&private_read(&config_path())?)
+    let mut config: Value = serde_json::from_str(&private_read(&config_path()?)?)
         .map_err(|_| "Invalid local configuration")?;
     if config["version"] != 1 {
         return Err("Unsupported local configuration version".into());
@@ -154,7 +154,7 @@ pub(super) async fn run(once: bool) -> Result<()> {
                             continue;
                         }
                         session.observation.state = "waiting";
-                        save_config(&config_path(), &next_config)?;
+                        save_config(&config_path()?, &next_config)?;
                         config = next_config;
                         selected.push(session);
                         reconnect_widgets = true;
@@ -231,7 +231,7 @@ pub(super) async fn run(once: bool) -> Result<()> {
                 );
             if Command::new(helper)
                 .arg("connect-local")
-                .arg(config_path())
+                .arg(config_path()?)
                 .output()
                 .await
                 .is_ok_and(|r| r.status.success())

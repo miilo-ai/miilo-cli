@@ -3,7 +3,7 @@ use super::*;
 use crate::application::{collector::Collector, ports::ObservationSource};
 use miilo_adapter_sdk::ObservatorySnapshot;
 pub(super) fn read_snapshot() -> Result<ObservatorySnapshot> {
-    let config: Value = serde_json::from_str(&private_read(&config_path())?)
+    let config: Value = serde_json::from_str(&private_read(&config_path()?)?)
         .map_err(|_| "Invalid local configuration")?;
     let path = config["snapshotFile"]
         .as_str()
@@ -96,7 +96,7 @@ pub(super) async fn run(mut config: Value, once: bool) -> Result<()> {
                         ))?;
                     }
                     config["sessions"].as_array_mut().unwrap().push(item);
-                    save_config(&config_path(), &config)?;
+                    save_config(&config_path()?, &config)?;
                     selected.push(session);
                 }
             }

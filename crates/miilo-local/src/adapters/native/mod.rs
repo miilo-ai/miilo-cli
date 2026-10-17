@@ -10,6 +10,8 @@ use std::{
     time::Duration,
 };
 use tokio::process::Command;
+mod configuration;
+mod configuration_migration;
 mod files;
 mod groups;
 mod import_flow;
@@ -36,9 +38,10 @@ pub async fn execute(args: &[String]) -> Result<()> {
             println!("miilo-local {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
+        Some("config") => configuration::execute(&args[1..]),
         Some("discover") => {
             let mut found = inventory(&directory).await;
-            if let Ok(text) = private_read(&config_path()) {
+            if let Ok(text) = private_read(&config_path()?) {
                 if let Ok(saved) = serde_json::from_str::<Value>(&text) {
                     found["savedGroups"] = saved["groups"].clone();
                 }
@@ -50,7 +53,7 @@ pub async fn execute(args: &[String]) -> Result<()> {
         Some("import") => import_flow::execute().await,
         Some("setup") => import_flow::setup(&directory).await,
         Some("run") => {
-            let config: Value = serde_json::from_str(&private_read(&config_path())?)
+            let config: Value = serde_json::from_str(&private_read(&config_path()?)?)
                 .map_err(|_| "Invalid local configuration")?;
             let once = args.get(1).is_some_and(|a| a == "--once");
             if config["version"] == 1 {
@@ -60,7 +63,7 @@ pub async fn execute(args: &[String]) -> Result<()> {
             }
         }
         Some("doctor") => {
-            let config: Value = serde_json::from_str(&private_read(&config_path())?)
+            let config: Value = serde_json::from_str(&private_read(&config_path()?)?)
                 .map_err(|_| "Invalid local configuration")?;
             if config["version"] == 1 {
                 println!(
@@ -110,7 +113,7 @@ pub async fn execute(args: &[String]) -> Result<()> {
         }
         _ => {
             println!(
-                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | run [--once] | doctor | snapshot | explain <provider>/<work>"
+                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | config paths|init|migrate|check | run [--once] | doctor | snapshot | explain <provider>/<work>"
             );
             Ok(())
         }

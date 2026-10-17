@@ -63,6 +63,14 @@ async fn main() -> ExitCode {
             Err(error) => fail(error),
         };
     }
+    if let Command::Config { args: config_args } = &args.command {
+        let mut local_args = vec!["config".to_owned()];
+        local_args.extend(config_args.iter().cloned());
+        return match miilo_local::execute(&local_args).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => fail(error),
+        };
+    }
     let token = match credentials::resolve(args.token.clone(), args.token_file.as_deref()) {
         Ok(token) => token,
         Err(error) => return fail(error),
@@ -79,7 +87,7 @@ async fn main() -> ExitCode {
 
 async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
-        Command::Local { .. } | Command::Archive { .. } => {
+        Command::Local { .. } | Command::Archive { .. } | Command::Config { .. } => {
             unreachable!("local commands are dispatched before HTTP configuration")
         }
         Command::Doctor => {

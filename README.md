@@ -1,9 +1,20 @@
-# Miilo CLI
+<h1 align="center">Miilo CLI</h1>
+
+<p align="center">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-b7410e?style=flat-square&amp;logo=rust&amp;logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&amp;logo=typescript&amp;logoColor=white" />
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-417e38?style=flat-square&amp;logo=nodedotjs&amp;logoColor=white" />
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-343434?style=flat-square&amp;logo=linux&amp;logoColor=white" />
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-444444?style=flat-square&amp;logo=apple&amp;logoColor=white" />
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-0078d4?style=flat-square" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="LICENSE"><img alt="Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" /></a>
+</p>
 
 **See what your agents are doing without opening another dashboard.**
-
-[![CI](https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml)
-[![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 Miilo CLI observes selected existing sessions locally, or connects to an optional
 self-hosted/managed Miilo API. Standalone observation needs no account, CE process,

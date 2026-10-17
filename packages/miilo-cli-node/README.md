@@ -1,4 +1,9 @@
-# Miilo CLI for Node.js
+<h1 align="center">Miilo CLI for Node.js</h1>
+
+<p align="center">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&amp;logo=typescript&amp;logoColor=white" />
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-417e38?style=flat-square&amp;logo=nodedotjs&amp;logoColor=white" />
+</p>
 
 The Node.js implementation of the Miilo observer CLI. It exposes the same
 read-only commands as the native Rust binary and works with managed or

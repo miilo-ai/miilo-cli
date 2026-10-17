@@ -20,6 +20,21 @@ struct DoctorReport<'a> {
 #[tokio::main]
 async fn main() -> ExitCode {
     let values: Vec<String> = std::env::args().skip(1).collect();
+    let archive_index = if values.first().is_some_and(|v| v == "archive") {
+        Some(0)
+    } else if values.first().is_some_and(|v| v == "--json")
+        && values.get(1).is_some_and(|v| v == "archive")
+    {
+        Some(1)
+    } else {
+        None
+    };
+    if let Some(index) = archive_index {
+        return match miilo_local::archive::execute(&values[index + 1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => fail(error),
+        };
+    }
     let local_index = if values.first().is_some_and(|v| v == "local") {
         Some(0)
     } else if values.first().is_some_and(|v| v == "--json")

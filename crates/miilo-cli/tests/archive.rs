@@ -3,6 +3,7 @@ fn run(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_miilo"))
         .args(args)
         .env("MIILO_URL", "not-a-url")
+        .env("MIILO_TOKEN", "fixture-conflicting-token")
         .env("MIILO_TOKEN_FILE", "/missing-credential")
         .output()
         .unwrap()

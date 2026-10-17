@@ -1,16 +1,18 @@
 #!/usr/bin/env node
+import { runLocal } from "./local.js";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArguments, validateTarget } from "./args.js";
 import { resolveCredential } from "./credentials.js";
 import { MiiloClient, MiiloHttpError } from "./client.js";
-import { writeConnections, writeDoctor, writeExplanation, writeJson, writeStreamEvent, writeWork, writeWorkItem } from "./output.js";
+import { writeConnections, writeDoctor, writeExplanation, writeJson, writeWork, writeWorkItem } from "./output.js";
 import type { ExplanationRequest, WorkItem } from "./types.js";
 
 export async function run(values = process.argv.slice(2)): Promise<void> {
+  if (values[0] === "local") return runLocal(values.slice(1));
   const args = parseArguments(values);
   if (args.command.kind === "help") {
-    console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <doctor|connections list|work list|work show|work explain|watch>");
+    console.log("usage: miilo [--endpoint URL] [--token-file PATH] [--json] <local|doctor|connections list|work list|work show|work explain|watch>");
     return;
   }
   const client = new MiiloClient(args.endpoint, resolveCredential(args.token, args.tokenFile));
@@ -55,19 +57,17 @@ async function findWork(client: MiiloClient, target: string): Promise<WorkItem> 
 }
 
 async function watch(client: MiiloClient, json: boolean): Promise<void> {
-  let cursor: string | undefined;
   let backoff = 1000;
   while (true) {
     try {
-      for await (const event of client.stream(cursor)) {
+      for await (const event of client.observe()) {
         backoff = 1000;
-        if (event.type === "event") cursor = event.streamCursor;
-        json ? writeJson(event, true) : writeStreamEvent(event);
+        if(json)writeJson(event,true);
+        else {console.log(`${event.reason}: ${event.snapshot.providers.length} providers, ${event.snapshot.workItems.length} work items`);writeWork(event.snapshot.workItems);}
       }
     } catch (error) {
       if (error instanceof MiiloHttpError && [401, 403].includes(error.status)) throw error;
       if (error instanceof MiiloHttpError && error.status === 409) {
-        cursor = (await client.snapshot()).cursor;
         continue;
       }
       console.error(`Miilo stream unavailable: ${message(error)}; retrying in ${backoff / 1000}s`);

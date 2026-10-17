@@ -1,5 +1,5 @@
 name: Pinned public or private SDK access
-description: Resolve the exact SDK tag without making repositories public
+description: Resolve the exact SDK tag or commit without making repositories public
 inputs:
   token:
     description: Optional contents-read token for the separate private SDK

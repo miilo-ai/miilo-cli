@@ -1,5 +1,5 @@
 use miilo_adapter_sdk::{ObservatorySnapshot, WorkItem};
-use miilo_client::{ConnectionsResponse, ExplanationBundle, HealthResponse, StreamEvent};
+use miilo_client::{ConnectionsResponse, ExplanationBundle, HealthResponse};
 use serde::Serialize;
 
 pub fn json(value: &impl Serialize) -> Result<(), serde_json::Error> {
@@ -75,19 +75,6 @@ pub fn explanation(bundle: &ExplanationBundle) {
     println!("Confidence: {:?}", bundle.confidence);
     if !bundle.recommendation.is_empty() {
         println!("Recommendation: {}", clean(&bundle.recommendation));
-    }
-}
-
-pub fn stream_event(event: &StreamEvent) {
-    match event {
-        StreamEvent::Event { event, .. } => println!(
-            "{}\t{}\t{:?}\t{}",
-            event.occurred_at,
-            clean(&event.provider_id),
-            event.kind,
-            clean(&event.summary)
-        ),
-        StreamEvent::Error { reason, message } => eprintln!("{reason}: {message}"),
     }
 }
 

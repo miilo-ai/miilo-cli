@@ -1,6 +1,8 @@
 mod error;
 mod models;
+mod reconcile;
 mod sse;
+pub use reconcile::ObservationUpdate;
 
 pub use error::ClientError;
 pub use models::{
@@ -46,6 +48,8 @@ impl MiiloClient {
             bearer_token,
             http: reqwest::Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .read_timeout(std::time::Duration::from_secs(45))
                 .build()?,
         })
     }
@@ -103,11 +107,16 @@ impl MiiloClient {
         &self,
         request: RequestBuilder,
     ) -> Result<T, ClientError> {
-        ensure_success(request.send().await?, self.bearer_token.as_deref())
-            .await?
-            .json()
-            .await
-            .map_err(ClientError::from)
+        let response = ensure_success(
+            request
+                .timeout(std::time::Duration::from_secs(15))
+                .send()
+                .await?,
+            self.bearer_token.as_deref(),
+        )
+        .await?;
+        let bytes = bounded_body(response, 2 * 1024 * 1024).await?;
+        serde_json::from_slice(&bytes).map_err(ClientError::from)
     }
 
     fn authorize(&self, request: RequestBuilder) -> RequestBuilder {
@@ -126,12 +135,13 @@ async fn ensure_success(
         return Ok(response);
     }
     let status = response.status();
-    let message = response.text().await.unwrap_or_else(|_| {
-        status
+    let message = match bounded_body(response, 64 * 1024).await {
+        Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+        Err(_) => status
             .canonical_reason()
-            .unwrap_or("unknown error")
-            .to_owned()
-    });
+            .unwrap_or("remote error response unavailable or oversized")
+            .into(),
+    };
     Err(ClientError::Http {
         status: status.as_u16(),
         message: redact_credential(message, token),
@@ -163,6 +173,20 @@ fn redact_credential(message: String, token: Option<&str>) -> String {
         Some(token) => message.replace(token, "[redacted]"),
         None => message,
     }
+}
+
+async fn bounded_body(
+    mut response: reqwest::Response,
+    limit: usize,
+) -> Result<Vec<u8>, ClientError> {
+    let mut out = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        if out.len().saturating_add(chunk.len()) > limit {
+            return Err(ClientError::ResponseTooLarge);
+        }
+        out.extend_from_slice(&chunk);
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

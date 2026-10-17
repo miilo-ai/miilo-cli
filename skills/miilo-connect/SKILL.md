@@ -1,38 +1,62 @@
 ---
 name: miilo-connect
-description: Set up or diagnose the read-only Miilo CLI against a user-selected Miilo backend. Use for connecting an existing installation or preparing first-time observation, not for launching agent tasks or approving provider work.
+description: Set up or diagnose read-only Miilo observation of explicitly selected existing local sessions, or connect to a user-chosen remote Miilo API. Does not launch agent work or approve provider tasks.
 ---
 
 # Connect to Miilo
 
-Miilo CLI observes a Miilo API. It does not itself launch a Codex/Cursor harness, ingest arbitrary local transcripts, or sign into every provider. An agent's own login does not authorize Miilo access.
+Inspect `miilo --version` and `miilo --help`; published releases may predate the
+standalone candidate. Candidate 0.2 adds `miilo local ...` and a `miilo-local`
+compatibility executable. Use only commands actually present in the installation.
+Use an existing binary or an available release matching the OS/architecture;
+never invent a package publication or installer URL.
 
-## Find the shortest supported path
+## Local observation
 
-Use an existing `miilo` installation if present. Run `miilo --version` and inspect `miilo --help` before assuming commands exist. This release supports `doctor`, `connections list`, `work list`, `work show`, `work explain`, and `watch`; it has no `login`, `setup`, provider registration or approval command.
+On Linux/macOS, `miilo local discover PROJECT` lists existing Codex/Cursor session
+metadata through read-only adapters. Discovery is not permission to import every
+session. Let the user select sessions using `miilo local setup PROJECT`, or use
+the native desktop import screen. Group folder/pattern rules and inclusion of
+future matches require explicit selection. Do not start/resume agent work to
+manufacture activity, scan credential stores, or substitute guessed transcript paths.
 
-If installation is needed, inspect this repository's README and GitHub Releases. Select the user's OS/architecture and an actually published release. Do not invent an npm publication, Homebrew formula or installer URL. Only one implementation should own the `miilo` command. For a source checkout, follow its documented build instructions.
+Local mode requires no CE process, Miilo API URL, Miilo account, or bearer token.
+Version-2 configuration contains `mode: local`, selected sessions/groups and a
+private snapshot cache path. `miilo local run` continuously observes the selection;
+`run --once` performs one bounded read. `snapshot` reports current normalized
+observations; `explain PROVIDER/WORK` reports source facts and missing evidence.
+Stop continuous observation after a useful natural update or a bounded test.
+Stopping this observer must not stop the source agent.
 
-Ask for the Miilo API endpoint only when it cannot be resolved from the user's chosen configuration. `MIILO_URL` may point to CE, a private deployment or hosted Miilo. Never substitute a vendor cloud endpoint or a developer's personal factory. A tunnel provides network access, not application authorization.
+Native Linux import can install a user-owned observation service. Inspect its
+status before starting another collector. Do not replace existing CE/remote
+configuration: legacy version-1 files remain explicit remote mode. Use a separate
+`MIILO_LOCAL_CONFIG` file when testing another mode. A stale cache is unavailable,
+not proof that an agent is sleeping. Transcript activity does not prove execution,
+task completion, permission requests or approval authority.
 
-Prefer `MIILO_TOKEN_FILE` pointing to a user-only credential file. Legacy `MIILO_TOKEN` remains available; never configure both. Resolve credential configuration from a user-approved environment/secret reference. Do not request secret values in chat, print them, put them in command arguments, commit them, or reuse a provider API key as a Miilo account token. Never read another agent's credential stores to extract a token. If credential provisioning is not available, stop at that explicit blocker; do not disable authentication.
+Node local commands delegate to the same native `miilo-local` engine; install the
+native engine or set `MIILO_LOCAL_EXECUTABLE`. Windows currently supports remote
+commands; do not promise native local transcript observation there.
 
-## Verify observation
+## Optional remote observation
 
-With configuration supplied securely, run:
+Only ask for an API URL when the user chooses CE, managed Miilo or another remote
+deployment. Configure `MIILO_URL` and preferably `MIILO_TOKEN_FILE` from approved
+environment/secret references. Do not put secret values in chat or arguments,
+extract another agent's credentials, reuse provider keys as Miilo identity tokens,
+or disable authentication to bypass provisioning. Legacy `MIILO_TOKEN` is supported;
+never configure both methods. A tunnel grants reachability, not authorization.
 
-```sh
-miilo doctor
-miilo connections list
-miilo work list
-```
-
-Use returned provider/work IDs for `miilo work show CONNECTION/WORK_ID`; do not guess IDs. A healthy API with no connections is reachable but not onboarded. An empty work list may be legitimate and is not evidence of broken credentials.
-
-To connect a new provider, use the selected backend's supported registration flow. Cloud and CE have different registration and credential contracts; inspect that backend's documentation. Only observe resources the user selects. Do not start/resume a task just to manufacture activity.
-
-For a selected existing workflow, inspect one current item and use bounded `miilo watch` observation if resumable streaming is available. Stop watching after a meaningful real update or a stated timeout. Report “awaiting natural activity” if no update arrives; do not claim streaming was proved by a successful health check.
+Run `miilo doctor`, `connections list`, `work list`, and selected `work show` or
+`work explain PROVIDER/WORK`. Use returned IDs. Empty work may be legitimate.
+`miilo watch` subscribes before a fresh snapshot and reads authoritative state
+again after events/reconnects. It does not blindly apply deltas to an old cache.
+Remote provider registration follows that deployment's documented workflow.
 
 ## Handoff
 
-Report the implementation/version, selected endpoint without secrets, observed connection IDs, proof commands and outcomes, any unproved streaming/provider capability, and the exact remaining user step. Preserve user-owned setup and unrelated configuration. The first CLI release is read-only; supported control actions in other Miilo clients are not CLI features.
+Report binary/version, effective local/remote mode, selected sources, freshness,
+proof commands and outcomes, and the exact remaining step. Separate fixture
+evidence from live updates and unsupported integrations. Public CLI local sources
+are read-only; control features in other Miilo clients are not CLI approval commands.

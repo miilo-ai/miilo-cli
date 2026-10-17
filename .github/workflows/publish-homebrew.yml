@@ -75,6 +75,9 @@ jobs:
           brew install "miilo-ai/tap/$name"
           brew test "miilo-ai/tap/$name"
           "$name" --version
+          if [ "$name" = miilo ]; then
+            "$(brew --prefix "miilo-ai/tap/$name")/bin/miilo-local" --version
+          fi
           brew uninstall "miilo-ai/tap/$name"
         done
         git push

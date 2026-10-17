@@ -38,6 +38,8 @@ for arch,(filename,digest,_) in archives.items():
 source='bin/linux-aarch64/miilo-owl' if args.kind=='owl' else '${srcdir}/'+('miilo-cli' if args.kind=='cli' else 'miilo-ce')+'-${CARCH}-unknown-linux-gnu/'+binary
 licensefile='LICENSE' if args.kind=='owl' else '${srcdir}/'+('miilo-cli' if args.kind=='cli' else 'miilo-ce')+'-${CARCH}-unknown-linux-gnu/LICENSE'
 lines += ['', 'package() {',f'  install -Dm755 "{source}" "$pkgdir/usr/bin/{binary}"',f'  install -Dm644 "{licensefile}" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"','}']
+if args.kind=='cli':
+ lines.insert(-2, '  install -Dm755 "${srcdir}/miilo-cli-${CARCH}-unknown-linux-gnu/miilo-local" "$pkgdir/usr/bin/miilo-local"')
 args.output.mkdir(parents=True,exist_ok=True)
 (args.output/'PKGBUILD').write_text('\n'.join(lines)+'\n')
 print('Rendered',pkgname,args.tag)

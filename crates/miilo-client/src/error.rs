@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
+    #[error("Miilo stream requires a fresh snapshot and subscription")]
+    SnapshotRequired,
+    #[error("Miilo response exceeded the client size limit")]
+    ResponseTooLarge,
     #[error("Miilo endpoint must not contain credentials, a query, or a fragment")]
     UnsafeEndpoint,
     #[error("invalid Miilo endpoint: {0}")]

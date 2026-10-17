@@ -38,6 +38,10 @@ for target in os.environ['TARGETS'].split(','):
             env.update(MIILO_CE_BINARY=str(binary),MIILO_CREDENTIAL_CLI_CHECK='0')
             subprocess.run([sys.executable,'scripts/test-credential-lifecycle.py'],env=env,check=True,timeout=30)
         else:
+            local_binaries=[p for p in stage.rglob('miilo-local'+('.exe' if os.name=='nt' else '')) if p.is_file()]
+            if len(local_binaries)!=1:raise RuntimeError('Native CLI archive must include miilo-local')
+            local_version=subprocess.check_output([str(local_binaries[0]),'--version'],text=True,timeout=15).strip()
+            if local_version.split()[-1]!=read_version(root):raise RuntimeError('Local engine archive version mismatch')
             env['MIILO_MOCK_PORT']='38765'
             server=subprocess.Popen([sys.executable,'scripts/mock_api.py'],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             try:

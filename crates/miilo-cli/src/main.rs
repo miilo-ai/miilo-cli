@@ -7,7 +7,7 @@ use clap::Parser;
 use futures_util::StreamExt;
 use miilo_adapter_sdk::WorkItem;
 use miilo_client::{
-    ExplanationPreferences, ExplanationRequest, MiiloClient, StreamEvent, is_authentication_error,
+    ExplanationPreferences, ExplanationRequest, MiiloClient, is_authentication_error,
     is_snapshot_required,
 };
 use serde::Serialize;
@@ -23,6 +23,12 @@ struct DoctorReport<'a> {
 #[tokio::main]
 async fn main() -> ExitCode {
     let args = Args::parse();
+    if let Command::Local { args: local_args } = &args.command {
+        return match miilo_local::execute(local_args).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => fail(error),
+        };
+    }
     let token = match credentials::resolve(args.token.clone(), args.token_file.as_deref()) {
         Ok(token) => token,
         Err(error) => return fail(error),
@@ -39,6 +45,9 @@ async fn main() -> ExitCode {
 
 async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
+        Command::Local { .. } => {
+            unreachable!("local commands are dispatched before HTTP configuration")
+        }
         Command::Doctor => {
             let health = client.health().await?;
             let snapshot = client.snapshot().await?;
@@ -127,13 +136,11 @@ async fn find_work(
 }
 
 async fn watch(client: &MiiloClient, json: bool) -> Result<(), Box<dyn std::error::Error>> {
-    let mut cursor = None;
     let mut backoff = Duration::from_secs(1);
     loop {
-        let mut stream = match client.stream(cursor.as_deref()).await {
+        let mut stream = match client.observe().await {
             Ok(stream) => stream,
             Err(error) if is_snapshot_required(&error) => {
-                cursor = Some(client.snapshot().await?.cursor);
                 continue;
             }
             Err(error) if is_authentication_error(&error) => return Err(error.into()),
@@ -153,10 +160,10 @@ async fn watch(client: &MiiloClient, json: bool) -> Result<(), Box<dyn std::erro
                 item = stream.next() => match item {
                     Some(Ok(event)) => {
                         backoff = Duration::from_secs(1);
-                        if let StreamEvent::Event { stream_cursor, .. } = &event {
-                            cursor = Some(stream_cursor.clone());
+                        if json { output::json_line(&event)?; } else {
+                            println!("{}: {} providers, {} work items",event.reason,event.snapshot.providers.len(),event.snapshot.work_items.len());
+                            output::work(&event.snapshot.work_items);
                         }
-                        if json { output::json_line(&event)?; } else { output::stream_event(&event); }
                     }
                     Some(Err(error)) if is_authentication_error(&error) => return Err(error.into()),
                     Some(Err(error)) => {

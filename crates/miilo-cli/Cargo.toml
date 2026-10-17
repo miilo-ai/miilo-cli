@@ -17,7 +17,12 @@ categories = ["command-line-utilities", "development-tools"]
 name = "miilo"
 path = "src/main.rs"
 
+[[bin]]
+name = "miilo-local"
+path = "src/local.rs"
+
 [dependencies]
+miilo-local = { path = "../miilo-local" }
 clap = { version = "4", features = ["derive", "env"] }
 futures-util = "0.3"
 miilo-adapter-sdk.workspace = true
@@ -35,3 +40,6 @@ upgrade-guid = "0D7BFA4F-851A-4067-BF7C-32A373A90B2B"
 path-guid = "03CCDDD0-AF6A-49E8-9905-C6C24FE4A285"
 license = false
 eula = false
+
+[dev-dependencies]
+tempfile = "3"

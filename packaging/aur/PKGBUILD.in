@@ -21,5 +21,6 @@ package() {
 
   local release_dir="$srcdir/miilo-cli-${target}"
   install -Dm755 "$release_dir/miilo" "$pkgdir/usr/bin/miilo"
+  install -Dm755 "$release_dir/miilo-local" "$pkgdir/usr/bin/miilo-local"
   install -Dm644 "$release_dir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

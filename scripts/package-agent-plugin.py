@@ -10,7 +10,7 @@ skill=root/'skills/miilo-connect/SKILL.md'
 text=skill.read_text()
 assert text.startswith('---\nname: miilo-connect\n') and 'MIILO_TOKEN_FILE' in text
 manifest={'$schema':'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json','name':'miilo-connect','version':version,
- 'description':'Connect an agent to a user-selected Miilo observation endpoint.',
+ 'description':'Observe explicitly selected local sessions or a chosen remote Miilo endpoint.',
  'author':{'name':'Viratec Interactive LLC','email':'contact@miilo.tech'},'license':'Apache-2.0',
  'repository':'https://github.com/miilo-ai/miilo-cli','homepage':'https://miilo.tech',
  'extensions':{'com.openai':{'requires_local_executor':True,'onboardingSkill':'./skills/miilo-connect/SKILL.md'}}}
@@ -22,5 +22,5 @@ with zipfile.ZipFile(output/f'miilo-agent-plugin-{version}.zip','w',compression=
   legacy={key:value for key,value in manifest.items() if key not in ['$schema','extensions']}
   legacy['skills']='./skills/'
   archive.writestr(f'.{host}-plugin/plugin.json',json.dumps(legacy,indent=2)+'\n')
- archive.writestr('README.md','Miilo connection skill. Local execution required. Configure MIILO_URL and MIILO_TOKEN_FILE securely. This package observes; it does not authorize provider actions. Marketplace review and approval are separate from this build.\n')
+ archive.writestr('README.md','Miilo connection skill. Local execution required. Local mode requires the native engine and explicit session selection, without an API URL. Configure MIILO_URL and MIILO_TOKEN_FILE only for optional remote mode. This package observes; it does not authorize provider actions. Marketplace review and approval are separate from this build.\n')
 print(output/f'miilo-agent-plugin-{version}.zip')

@@ -2,6 +2,7 @@
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tomllib
@@ -11,8 +12,8 @@ import urllib.request
 
 def main():
     dependency = tomllib.loads(Path('Cargo.toml').read_text())['workspace']['dependencies']['miilo-adapter-sdk']
-    if dependency.get('git') != 'https://github.com/miilo-ai/miilo-sdk' or not dependency.get('tag'):
-        raise ValueError('a canonical tagged SDK dependency is required')
+    if dependency.get('git') != 'https://github.com/miilo-ai/miilo-sdk' or not (dependency.get('tag') or re.fullmatch(r'[a-f0-9]{40}', dependency.get('rev', ''))):
+        raise ValueError('a canonical tag or full commit SDK dependency is required')
     token = os.environ.get('SDK_READ_TOKEN', '')
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'miilo-release-check'}
     if token:
@@ -39,11 +40,21 @@ def main():
             env['GIT_CONFIG_GLOBAL'] = str(config)
             with open(os.environ['GITHUB_ENV'], 'a') as stream:
                 stream.write(f'GIT_CONFIG_GLOBAL={config}\nCARGO_NET_GIT_FETCH_WITH_CLI=true\n')
-        result = subprocess.run(['git', 'ls-remote', '--exit-code', dependency['git'],
-                                 'refs/tags/' + dependency['tag']], env=env,
-                                capture_output=True, text=True, timeout=30)
-        if result.returncode:
-            raise RuntimeError('Pinned SDK tag cannot be fetched; no release may proceed')
+        if dependency.get('rev'):
+            request=urllib.request.Request('https://api.github.com/repos/miilo-ai/miilo-sdk/commits/'+dependency['rev'], headers=headers)
+            try:
+                with urllib.request.urlopen(request,timeout=20) as response:
+                    commit=json.load(response)
+                if commit.get('sha') != dependency['rev']:
+                    raise RuntimeError('Pinned SDK commit did not match')
+            except urllib.error.HTTPError:
+                raise RuntimeError('Pinned SDK commit cannot be fetched; no release may proceed') from None
+        else:
+            result = subprocess.run(['git', 'ls-remote', '--exit-code', dependency['git'],
+                                     'refs/tags/' + dependency['tag']], env=env,
+                                    capture_output=True, text=True, timeout=30)
+            if result.returncode:
+                raise RuntimeError('Pinned SDK tag cannot be fetched; no release may proceed')
     else:
         print('Private SDK access is not configured. No release has been made')
     if output := os.environ.get('GITHUB_OUTPUT'):

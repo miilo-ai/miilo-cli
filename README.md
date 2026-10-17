@@ -5,25 +5,30 @@
 [![CI](https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/miilo-ai/miilo-cli/actions/workflows/ci.yml)
 [![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Miilo CLI turns provider-neutral work, evidence, attention, and explanations into
-a terminal interface. Point it at Miilo Cloud, Miilo CE, or a private deployment.
-The endpoint is yours; there is no required call home.
+Miilo CLI observes selected existing sessions locally, or connects to an optional
+self-hosted/managed Miilo API. Standalone observation needs no account, CE process,
+Miilo URL, or listening HTTP service.
 
 ```bash
-export MIILO_URL=http://127.0.0.1:3700
-export MIILO_TOKEN='short-lived-bearer-token'
-
-miilo doctor
-miilo connections list
-miilo work list
-miilo work show factory/task-1
-miilo work explain factory/task-1 --question "Why is this blocked?"
-miilo watch
+miilo local discover /path/to/project
+miilo local setup /path/to/project
+miilo local run
+# In another terminal:
+miilo local snapshot
+miilo local explain PROVIDER/WORK_ID
 ```
 
-The first release is deliberately read-only. Observation can be broadly useful.
-Mutation needs stronger guarantees. Approve, reject, retry, and interrupt stay out
-until revision binding, confirmation, and authorization have independent evidence.
+Candidate 0.2 supports local Codex/Cursor observation on Linux/macOS. Discovery
+does not start or resume work; import is explicit. Bootstrap history appears idle.
+Only sanitized assistant summaries/tool names are projected, not user messages,
+reasoning or tool inputs/outputs. This is activity observation, not authoritative
+execution or approval detection. The CLI remains read-only. Windows supports the
+remote command set; native local file observation is not yet qualified there.
+
+For remote CE/managed observation, explicitly configure `MIILO_URL` and a private
+`MIILO_TOKEN_FILE`, then use `doctor`, `connections list`, `work list/show/explain`
+and `watch`. Watching subscribes before its fresh snapshot; events invalidate
+state and reconnects always obtain a fresh baseline.
 
 ## Install
 
@@ -47,34 +52,41 @@ install the same `miilo` command, so install one globally.
 ## Let your agent help
 
 The [miilo-connect skill](skills/miilo-connect/SKILL.md) guides a terminal-capable
-assistant through installation checks, endpoint selection and authenticated
-read-only observation. Read or attach the Markdown guide using your assistant’s
-supported workflow; it is not an automatically installed plugin for every tool.
-The guide never extracts credentials from another agent or launches replacement
-work to simulate activity. Current account-token provisioning and provider
-registration remain separate backend steps. There is no `miilo setup` or
-`miilo login` command in this release.
+assistant through version checks, explicit local selection or an optional
+authenticated remote connection. It never extracts another agent's credentials
+or starts work to populate a demonstration. Candidate source is not a published
+release; installation URLs below work only after owner-approved publication.
 
-## What it connects to
+## Runtime and state
 
-```text
-miilo CLI ── HTTP + resumable SSE ── configured Miilo API ── provider adapters
-```
+The public `miilo-local` library contains small read-only discovery/transcript
+adapters. `miilo` invokes it directly; `miilo-local` is a compatibility executable
+for native widgets. The Node CLI delegates local commands to that same executable
+(PATH or `MIILO_LOCAL_EXECUTABLE`); remote commands remain implemented in Node.
 
-`MIILO_URL` is authoritative. The target may live on a workstation, LAN,
-Tailscale network, private cloud, or isolated environment. The CLI stores no
-provider credentials and contains no analytics path. Authentication is a
-caller-supplied bearer token.
+Selected configuration lives at `$XDG_CONFIG_HOME/miilo/local.json` (or
+`~/.config/miilo/local.json`), overridable with `MIILO_LOCAL_CONFIG`. Version 2
+stores `mode: local`, `snapshotFile`, sessions and groups, with no URL/token.
+The atomic owner-only runtime cache defaults to `$XDG_STATE_HOME/miilo/snapshot.json`
+or `~/.local/state/miilo/snapshot.json`. It is not durable history. A cache older
+than 15 seconds is rejected. One collector per configuration is allowed.
+Native Linux import owns `miilo-local-desktop.service`; terminal `run` stops on
+Ctrl+C without touching agents. Existing version-1 CE configurations stay explicit
+remote publication mode and are not silently migrated or overwritten.
 
-The provider contract comes from [`miilo-sdk`](https://github.com/miilo-ai/miilo-sdk).
-The CLI observes the normalized contract; it never executes an adapter directly.
+The [SDK runtime](https://github.com/miilo-ai/miilo-sdk) owns provider isolation,
+validation, aggregation, deduplication and bounded event history. CE consumes the
+same core. No private private-application checkout is required. The committed SDK
+dependency pins a full source revision; private repository access is required
+until the owner makes these repositories public.
 
 ## Repository map
 
 | Path | Purpose |
 | --- | --- |
 | [`crates/miilo-client`](crates/miilo-client/) | Rust HTTP, authentication, snapshots, explanations, and resumable SSE |
-| [`crates/miilo-cli`](crates/miilo-cli/) | Native Rust executable |
+| [`crates/miilo-cli`](crates/miilo-cli/) | Native `miilo` and `miilo-local` executables |
+| [`crates/miilo-local`](crates/miilo-local/) | Standalone local session adapters and composition |
 | [`packages/miilo-cli-node`](packages/miilo-cli-node/) | Portable Node.js implementation of the same read-only commands |
 | [`packaging/aur`](packaging/aur/) | Arch Linux and Omarchy package template |
 
@@ -87,7 +99,7 @@ make smoke
 
 Tests include both implementations, a packed npm installation, and an
 authenticated user journey against a deterministic mock API. Local development
-next to `miilo-sdk` uses the sibling checkout; clean releases resolve the tagged
+next to `miilo-sdk` uses the sibling checkout; clean releases resolve the pinned
 SDK commit.
 
 ## Releases

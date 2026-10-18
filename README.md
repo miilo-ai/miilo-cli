@@ -42,6 +42,13 @@ For remote CE/managed observation, explicitly configure `MIILO_URL` and a privat
 and `watch`. Watching subscribes before its fresh snapshot; events invalidate
 state and reconnects always obtain a fresh baseline.
 
+## Use Miilo from a phone
+
+Read [phone and remote setup](docs/PHONE_AND_REMOTE.md) before connecting a
+launcher. Run the observer where the sessions live; configure a reachable Miilo
+endpoint on the phone. Tailscale provides a route, not Miilo or Codex credentials.
+A standalone local collector does not automatically expose a remote API.
+
 ## Install
 
 The native Rust binary is the default:
@@ -87,9 +94,8 @@ remote publication mode and are not silently migrated or overwritten.
 
 The [SDK runtime](https://github.com/miilo-ai/miilo-sdk) owns provider isolation,
 validation, aggregation, deduplication and bounded event history. CE consumes the
-same core. The committed SDK
-dependency pins a full source revision; private repository access is required
-until the owner makes these repositories public.
+same core. The committed SDK dependency pins a full source revision in the public SDK
+repository; ordinary source reads do not require a private repository token.
 
 ## Repository map
 

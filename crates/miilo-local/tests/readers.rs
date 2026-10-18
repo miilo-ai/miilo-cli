@@ -66,3 +66,43 @@ fn replacement_truncation_and_symlink_targets_require_reconnection() {
     let mut tail = TranscriptTail::new(link, apply_cursor_activity);
     assert!(tail.read(&mut state).is_err());
 }
+
+#[test]
+fn bootstrap_preserves_codex_time_and_dates_cursor_history_by_file() {
+    use std::{
+        fs::{self, File, FileTimes},
+        time::{Duration, UNIX_EPOCH},
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let at = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+    for source in ["codex_transcript", "cursor_transcript"] {
+        let path = dir.path().join(source);
+        let row = if source == "codex_transcript" {
+            json!({"timestamp":"2020-01-01T00:00:00Z","type":"event_msg","payload":{"type":"task_complete"}})
+        } else {
+            json!({"type":"turn_ended","status":"completed"})
+        };
+        fs::write(&path, format!("{row}\n")).unwrap();
+        File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_times(FileTimes::new().set_modified(at))
+            .unwrap();
+        let mut observation = state();
+        observation.source = source.into();
+        let path = path.canonicalize().unwrap();
+        if source == "codex_transcript" {
+            CodexTranscriptTail::new(path)
+                .read(&mut observation)
+                .unwrap();
+            assert!(observation.observed_at.starts_with("2020-01-01"));
+        } else {
+            TranscriptTail::new(path, apply_cursor_activity)
+                .read(&mut observation)
+                .unwrap();
+            let expected = chrono::DateTime::<chrono::Utc>::from(at);
+            assert_eq!(observation.observed_at, expected.to_rfc3339());
+        }
+    }
+}

@@ -87,3 +87,22 @@ fn failed_read_does_not_publish_a_partial_success_snapshot() {
     );
     assert!(sink.0.is_empty());
 }
+
+#[test]
+fn projection_retains_sleeping_sessions_only_inside_activity_window() {
+    use miilo_local::domain::projection::project;
+    let mut source = Source::new("sleeping");
+    source.state.observed_at = "2026-01-01T00:00:00Z".into();
+    for (hours, extra_seconds, visible) in [(0, 0, true), (12, 0, true), (12, 1, false)] {
+        let now =
+            Fixed.now() + chrono::Duration::hours(hours) + chrono::Duration::seconds(extra_seconds);
+        let snapshot =
+            serde_json::to_value(project(&source.state, &json!([]), now).unwrap()).unwrap();
+        assert_eq!(snapshot["actors"][0]["status"], "resting");
+        assert_eq!(
+            snapshot["actors"][0]["extensions"]["dev.miilo.session"]["recentlyActive"],
+            visible
+        );
+        assert_eq!(source.state.observed_at, "2026-01-01T00:00:00Z");
+    }
+}

@@ -43,6 +43,8 @@ impl TranscriptTail {
         if !metadata.is_file() {
             return Err("Selected transcript is not a regular file".into());
         }
+        let bootstrap = self.identity.is_none();
+        let initial_revision = state.revision;
         let identity = (metadata.dev(), metadata.ino());
         if self.identity.is_some_and(|old| old != identity) {
             return Err("Selected transcript was replaced; reconnect explicitly".into());
@@ -69,6 +71,14 @@ impl TranscriptTail {
             remaining -= n as u64;
             self.offset += n as u64;
             self.consume(&chunk[..n], state);
+        }
+        // Timestamp-free history was written before this observer started.
+        // File modification time is the best available activity bound.
+        if bootstrap && state.source == "cursor_transcript" && state.revision != initial_revision {
+            state.observed_at = metadata
+                .modified()
+                .map(|at| chrono::DateTime::<chrono::Utc>::from(at).to_rfc3339())
+                .map_err(|_| "Cannot date selected transcript")?;
         }
         Ok(())
     }

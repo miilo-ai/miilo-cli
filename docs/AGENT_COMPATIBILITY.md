@@ -7,10 +7,11 @@ start or resume agents, call models, sign users in, or require a Miilo server.
 | --- | --- | --- |
 | Codex | Existing session discovery and selected JSONL transcript | Linux and macOS |
 | Cursor | Selected agent transcript | Linux and macOS |
+| Claude Code | Selected main-session JSONL, assistant text and tool names | Transcript shape qualified against 2.1.300 on macOS |
 | OpenCode | Local SQLite sessions, assistant text and tool names | SQLite schema qualified against 1.19.3 |
 | Devin CLI | Local SQLite sessions and assistant text on the current branch | Schema qualified against 3000.11.92; local CLI only |
 
-Claude Code and Devin Cloud sessions are not covered by these adapters. A local
+Claude Desktop chat, Cowork and Devin Cloud sessions are not covered by these adapters. A local
 Devin sign-in does not grant Miilo access to Devin Cloud sessions. The remote
 Miilo endpoint workflow remains separate.
 
@@ -19,12 +20,24 @@ Miilo endpoint workflow remains separate.
 Run `miilo local discover /path/to/project`, then `miilo local setup /path/to/project`
 and choose the existing sessions to observe. The native launcher session picker
 consumes the same discovery/import contract. Folder groups support Codex, Cursor,
-OpenCode, Devin, or all supported sources. Existing enrollments are preserved.
+Claude Code, OpenCode, Devin, or all supported sources. Existing enrollments are preserved.
 
 Default database locations follow `XDG_DATA_HOME`, or `~/.local/share`:
 
 - OpenCode: `opencode/opencode.db`.
 - Devin CLI: `devin/cli/sessions.db`.
+
+Claude Code uses `~/.claude/projects/<project>/<session-id>.jsonl`, or the
+`projects` directory under `CLAUDE_CONFIG_DIR`. Discovery reads bounded metadata
+and labels sessions by project rather than exposing the first prompt. Nested
+subagent transcripts are excluded. Start Claude Code with `claude` in a terminal;
+the regular Claude Desktop chat experience does not create these CLI transcripts.
+
+Claude's [transcript format is internal and may change](https://code.claude.com/docs/en/sessions#where-transcripts-are-stored).
+This adapter is version-qualified and observes appended public activity, not an
+authoritative view of conversation branches after rewinds or compaction. Unknown
+record/block types are ignored. No hooks, configuration edits or resumptions are
+required for existing sessions.
 
 For nonstandard storage, set `MIILO_OPENCODE_DB` or `MIILO_DEVIN_DB` to the absolute
 path of the corresponding database before discovery/import. The collector stores
@@ -66,5 +79,11 @@ unchanged during observation. Neither adapter exposed control actions.
 Successful OpenCode inference and natural ongoing activity remain unverified.
 Incremental WAL updates are covered by fixtures rather than additional live model
 requests. Model availability is an agent configuration concern, separate from
-observation compatibility. This validation does not qualify Claude Code or Devin
-Cloud support.
+observation compatibility. This validation does not qualify Devin Cloud support.
+
+Claude Code 2.1.300 on macOS was validated against an existing user-started session:
+discovery, explicit import and snapshot publication passed. A user-sent follow-up
+appeared in a refreshed snapshot with a newer activity timestamp and changed
+assistant summary, without control actions. Continuous appended/partial records,
+unchanged polls, private-block exclusion and replacement protection passed fixture
+tests. No Claude prompts were sent by Miilo or the validation tools.

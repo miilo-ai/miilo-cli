@@ -22,6 +22,14 @@ pub(super) async fn resolve(mut chosen: Vec<Value>) -> Result<Vec<Value>> {
                 &root
             )?);
             item["root"] = json!(root);
+        } else if item["kind"] == "claude" {
+            let available = crate::claude::discovery::sessions(&super::inventory::claude_root())?;
+            let found = available
+                .iter()
+                .find(|s| s["id"] == item["id"])
+                .ok_or("Selected Claude session disappeared")?;
+            item["path"] = found["path"].clone();
+            item["root"] = found["root"].clone();
         } else if item["kind"] == "cursor" {
             let root = env::var_os("MIILO_CURSOR_PROJECTS")
                 .map(PathBuf::from)
@@ -68,7 +76,7 @@ pub(super) fn select(request: &Value, available: &Value) -> Result<Vec<Value>> {
         if found["observable"] != true
             || !matches!(
                 found["kind"].as_str(),
-                Some("codex" | "cursor" | "opencode" | "devin")
+                Some("codex" | "cursor" | "opencode" | "devin" | "claude")
             )
         {
             return Err("This agent does not support local import yet".into());

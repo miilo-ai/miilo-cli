@@ -39,6 +39,7 @@ pub(super) async fn install(configuration: &Path) -> Result<()> {
         "XDG_DATA_HOME",
         "MIILO_OPENCODE_DB",
         "MIILO_DEVIN_DB",
+        "CLAUDE_CONFIG_DIR",
     ] {
         if let Ok(value) = env::var(variable) {
             additional.push_str(&format!(

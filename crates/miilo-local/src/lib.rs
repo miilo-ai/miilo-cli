@@ -21,6 +21,9 @@ pub async fn execute(args: &[String]) -> Result<(), String> {
     Err("Local transcript observation currently requires Linux or macOS; remote Miilo commands work on this platform.".into())
 }
 #[cfg(unix)]
+#[path = "adapters/claude/mod.rs"]
+mod claude;
+#[cfg(unix)]
 #[path = "adapters/codex/mod.rs"]
 mod codex;
 #[cfg(unix)]
@@ -33,6 +36,8 @@ mod transcript;
 /// Read-only infrastructure adapters. Callers own explicit consent and path selection.
 #[cfg(unix)]
 pub mod adapters {
+    pub use crate::claude::discovery as claude_discovery;
+    pub use crate::claude::transcript::TranscriptTail as ClaudeTranscriptTail;
     pub use crate::codex::discovery as codex_discovery;
     pub use crate::codex::transcript::TranscriptTail as CodexTranscriptTail;
     pub use crate::cursor::discovery as cursor_discovery;

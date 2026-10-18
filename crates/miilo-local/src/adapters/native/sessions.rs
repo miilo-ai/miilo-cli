@@ -5,6 +5,7 @@ pub(super) fn provider_id(kind: &str, id: &str) -> String {
 pub(super) enum Tail {
     Codex(crate::codex::transcript::TranscriptTail),
     Cursor(crate::transcript::TranscriptTail),
+    Claude(crate::claude::transcript::TranscriptTail),
     Database(crate::session_database::DatabaseReader),
 }
 impl Tail {
@@ -12,6 +13,7 @@ impl Tail {
         match self {
             Self::Codex(t) => t.read(state),
             Self::Cursor(t) => t.read(state),
+            Self::Claude(t) => t.read(state),
             Self::Database(t) => t.read(state),
         }
     }
@@ -34,6 +36,7 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
         let selected = match kind {
             "codex" => discovery::authorized_path(path, root)?,
             "cursor" => crate::cursor::discovery::authorized_path(path, root)?,
+            "claude" => crate::claude::discovery::authorized_path(path, root)?,
             "opencode" | "devin" => crate::session_database::authorized_path(
                 path,
                 root,
@@ -43,6 +46,8 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
         };
         let tail = if kind == "codex" {
             Tail::Codex(crate::codex::transcript::TranscriptTail::new(selected))
+        } else if kind == "claude" {
+            Tail::Claude(crate::claude::transcript::TranscriptTail::new(selected))
         } else if kind == "cursor" {
             Tail::Cursor(crate::transcript::TranscriptTail::new(
                 selected,

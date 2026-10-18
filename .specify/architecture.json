@@ -17,7 +17,8 @@
         "Uuid::new_v4\\(",
         "Instant::now\\(",
         "\\brusqlite::",
-        "crate::session_database::"
+        "crate::session_database::",
+        "crate::claude::"
       ]
     }
   ],

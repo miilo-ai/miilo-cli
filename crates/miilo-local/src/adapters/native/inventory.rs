@@ -1,4 +1,10 @@
 use super::*;
+pub(super) fn claude_root() -> PathBuf {
+    env::var_os("CLAUDE_CONFIG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".claude"))
+        .join("projects")
+}
 pub(super) async fn inventory(directory: &Path) -> Value {
     let mut sessions = vec![];
     let mut errors = vec![];
@@ -26,6 +32,13 @@ pub(super) async fn inventory(directory: &Path) -> Value {
                 }
             }
             Err(_) => errors.push("Cursor discovery unavailable"),
+        }
+    }
+    let claude = claude_root();
+    if claude.exists() {
+        match crate::claude::discovery::sessions(&claude) {
+            Ok(items) => sessions.extend(items),
+            Err(_) => errors.push("Claude Code local discovery unavailable"),
         }
     }
     for (agent, path) in super::session_databases::configured() {

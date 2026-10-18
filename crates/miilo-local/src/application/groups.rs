@@ -28,9 +28,9 @@ pub fn validate(value: &Value, folders: &dyn FolderMetadata) -> Result<Vec<Value
         }
         if !matches!(
             rule["kind"].as_str(),
-            Some("codex" | "cursor" | "opencode" | "devin" | "all")
+            Some("codex" | "cursor" | "opencode" | "devin" | "claude" | "all")
         ) {
-            return Err("Choose Codex, Cursor, OpenCode, Devin, or all supported agents".into());
+            return Err("Choose a supported agent or all supported agents".into());
         }
         if !Path::new(folder).is_absolute()
             || folder.contains(['*', '?'])
@@ -54,7 +54,7 @@ pub fn matches(rule: &Value, session: &Value, folders: &dyn FolderMetadata) -> b
     if session["observable"] != true
         || !matches!(
             session["kind"].as_str(),
-            Some("codex" | "cursor" | "opencode" | "devin")
+            Some("codex" | "cursor" | "opencode" | "devin" | "claude")
         )
     {
         return false;

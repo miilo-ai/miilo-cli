@@ -34,7 +34,7 @@ jobs:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       with:
         persist-credentials: true
-        repository: miilo-ai/miilo-homebrew-tap
+        repository: miilo-ai/homebrew-cli
         token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         ref: main
       if: steps.credentials.outputs.ready == 'true'
@@ -69,16 +69,16 @@ jobs:
           echo 'No release has been made' >> "$GITHUB_STEP_SUMMARY"
           exit 0
         fi
-        brew tap miilo-ai/tap "$GITHUB_WORKSPACE"
+        brew tap miilo-ai/cli "$GITHUB_WORKSPACE"
         for name in "${names[@]}"; do
-          brew audit --strict "miilo-ai/tap/$name"
-          brew install "miilo-ai/tap/$name"
-          brew test "miilo-ai/tap/$name"
+          brew audit --strict "miilo-ai/cli/$name"
+          brew install "miilo-ai/cli/$name"
+          brew test "miilo-ai/cli/$name"
           "$name" --version
           if [ "$name" = miilo ]; then
-            "$(brew --prefix "miilo-ai/tap/$name")/bin/miilo-local" --version
+            "$(brew --prefix "miilo-ai/cli/$name")/bin/miilo-local" --version
           fi
-          brew uninstall "miilo-ai/tap/$name"
+          brew uninstall "miilo-ai/cli/$name"
         done
         git push
       if: steps.credentials.outputs.ready == 'true'

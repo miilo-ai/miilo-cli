@@ -48,8 +48,8 @@ The native Rust binary is the default:
 
 ```bash
 # macOS and Linux
-brew tap miilo-ai/tap https://github.com/miilo-ai/miilo-homebrew-tap.git
-brew install miilo-ai/tap/miilo
+brew tap miilo-ai/cli
+brew install miilo-ai/cli/miilo
 
 # macOS or Linux without Homebrew
 curl --proto '=https' --tlsv1.2 -LsSf \

@@ -16,3 +16,4 @@ runs:
     run: python .github/release-tools/sdk_access.py
     env:
       SDK_READ_TOKEN: ${{ inputs.token }}
+      GITHUB_TOKEN: ${{ github.token }}

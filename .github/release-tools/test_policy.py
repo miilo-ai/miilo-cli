@@ -81,6 +81,15 @@ class PolicyTests(unittest.TestCase):
             self.assertIn('No release has been made', captured.getvalue())
             self.assertIn('ready=false', output.read_text())
 
+    def test_public_sdk_metadata_uses_job_token_without_git_credentials(self):
+        dep = {'workspace': {'dependencies': {'miilo-adapter-sdk': {'git': 'https://github.com/miilo-ai/miilo-sdk', 'rev': 'a'*40}}}}
+        with patch.dict(os.environ, {'GITHUB_TOKEN': 'job-test-only'}, clear=True), patch('sdk_access.Path.read_text', return_value=''), patch('sdk_access.tomllib.loads', return_value=dep), patch('sdk_access.urllib.request.urlopen', side_effect=[io.BytesIO(b'{}'), io.BytesIO(b'{"sha":"' + b'a'*40 + b'"}')]) as request, patch('sdk_access.Path.write_text') as write:
+            sdk_access.main()
+        self.assertEqual(request.call_count, 2)
+        for call in request.call_args_list:
+            self.assertEqual(call.args[0].get_header('Authorization'), 'Bearer job-test-only')
+        write.assert_not_called()
+
     def test_configured_invalid_sdk_token_fails_without_echo(self):
         dep = {'workspace': {'dependencies': {'miilo-adapter-sdk': {'git': 'https://github.com/miilo-ai/miilo-sdk', 'tag': 'v0.1.0'}}}}
         error = urllib.error.HTTPError('https://api.github.com', 401, 'bad token', {}, None)

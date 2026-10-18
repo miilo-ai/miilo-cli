@@ -11,7 +11,7 @@ Prepared 2026-10-16. These are release-candidate steps, not a statement that pub
 - [ ] Rehearse the pinned cargo-dist version from the repository configuration: `dist plan`, generated workflow review and target builds. Preserve the custom Node package job. `make test-node` checks the CLI workflow's tap target against its manifest, but does not replace this rehearsal.
 - [ ] Configure the CLI's `HOMEBREW_TAP_TOKEN` only when ready to enable cross-repository publishing. See the credential guide for least privilege. No registry accounts are needed for GitHub-only assets.
 - [ ] Approve and publish reviewed CE/CLI candidate tags; verify checksums, provenance and exact release assets. The Node `.tgz` is included by the existing custom artifact/release job; verify it is actually attached before documenting it as downloadable.
-- [ ] Inspect the generated `miilo` formula in `miilo-ai/miilo-homebrew-tap`; the pre-release tap currently contains no installable formula.
+- [ ] Inspect the generated `miilo` formula in `miilo-ai/homebrew-cli`; the pre-release tap currently contains no installable formula.
 
 Publishing stays an explicit owner-controlled step. A prerelease is not a stable support claim for untested targets.
 
@@ -35,8 +35,8 @@ Remote Tower access comes after loopback acceptance. Verify guest routing and TL
 Homebrew uses a custom repository name, so the explicit URL matters:
 
 ```sh
-brew tap miilo-ai/tap https://github.com/miilo-ai/miilo-homebrew-tap.git
-brew install miilo-ai/tap/miilo
+brew tap miilo-ai/cli
+brew install miilo-ai/cli/miilo
 ```
 
 Run only after the generated formula exists and points at verified release assets. Test Linuxbrew separately from macOS Homebrew. Homebrew is not a Windows installer; Windows needs its own ZIP/MSI/PowerShell artifact acceptance.

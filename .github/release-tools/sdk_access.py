@@ -25,8 +25,9 @@ def main():
     pinned_reference(dependency)
     token = os.environ.get('SDK_READ_TOKEN', '')
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'miilo-release-check'}
-    if token:
-        headers['Authorization'] = 'Bearer ' + token
+    api_token = token or os.environ.get('GH_TOKEN', '') or os.environ.get('GITHUB_TOKEN', '')
+    if api_token:
+        headers['Authorization'] = 'Bearer ' + api_token
     request = urllib.request.Request('https://api.github.com/repos/miilo-ai/miilo-sdk', headers=headers)
     ready = True
     try:
@@ -36,7 +37,7 @@ def main():
         if not token and error.code in (401, 404):
             ready = False
         else:
-            raise RuntimeError('SDK access check failed; inspect credential scope or service availability') from None
+            raise RuntimeError(f'SDK access check failed (HTTP {error.code}); inspect credential scope or service availability') from None
     if ready:
         env = dict(os.environ, GIT_TERMINAL_PROMPT='0')
         if token:

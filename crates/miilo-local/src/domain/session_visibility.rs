@@ -11,7 +11,8 @@ pub fn recently_observed(timestamp: &str, now: DateTime<Utc>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::recently_observed;
+    use chrono::{DateTime, Utc};
     #[test]
     fn twelve_hour_boundary_uses_activity_time() {
         let now: DateTime<Utc> = "2026-10-17T12:00:00Z".parse().unwrap();

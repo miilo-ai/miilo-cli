@@ -75,6 +75,12 @@ assistant through version checks, explicit local selection or an optional
 authenticated remote connection. It never extracts another agent's credentials
 or starts work to populate a demonstration. Download packaged installers from [GitHub Releases](https://github.com/miilo-ai/miilo-cli/releases).
 
+## Remove or reinstall
+
+See [removal and retained data](docs/UNINSTALL.md) before uninstalling a client
+or collector. Integration removal, package removal and private-data purge have
+different scopes. Shared observer services must be handled explicitly.
+
 ## Runtime and state
 
 The public `miilo-local` library contains small read-only discovery/transcript

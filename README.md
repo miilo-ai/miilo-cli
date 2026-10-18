@@ -30,7 +30,7 @@ miilo local snapshot
 miilo local explain PROVIDER/WORK_ID
 ```
 
-Candidate 0.2 supports local Codex/Cursor observation on Linux/macOS. Discovery
+Version 0.2 supports local Codex/Cursor observation on Linux/macOS. Discovery
 does not start or resume work; import is explicit. Bootstrap history appears idle.
 Only sanitized assistant summaries/tool names are projected, not user messages,
 reasoning or tool inputs/outputs. This is activity observation, not authoritative
@@ -66,8 +66,7 @@ install the same `miilo` command, so install one globally.
 The [miilo-connect skill](skills/miilo-connect/SKILL.md) guides a terminal-capable
 assistant through version checks, explicit local selection or an optional
 authenticated remote connection. It never extracts another agent's credentials
-or starts work to populate a demonstration. Candidate source is not a published
-release; installation URLs below work only after owner-approved publication.
+or starts work to populate a demonstration. Download packaged installers from [GitHub Releases](https://github.com/miilo-ai/miilo-cli/releases).
 
 ## Runtime and state
 
@@ -136,7 +135,7 @@ For the release-to-VM checklist, see [Omarchy acceptance](docs/OMARCHY.md). Comm
 
 See [.github/RELEASING.md](.github/RELEASING.md) for private-repository rehearsals, manifest-driven tags, credential-missing skips and activation. Publication stays disabled until explicitly requested/configured.
 
-`watch --json` in candidate 0.2 emits NDJSON records with `type: snapshot`,
+`watch --json` in version 0.2 emits NDJSON records with `type: snapshot`,
 `reason: bootstrap|event`, and an authoritative `snapshot`. This replaces the
 old raw-event watch output. Library consumers needing raw resumable events can
 still call `MiiloClient.stream`; `observe` provides reconciled snapshots.
@@ -157,7 +156,7 @@ raw streaming commands and Node/native requirements.
 
 ## Shared user settings
 
-The native candidate supports an explicit migration into `~/.miilo/`:
+The native CLI supports an explicit migration into `~/.miilo/`:
 
 ```sh
 miilo config paths

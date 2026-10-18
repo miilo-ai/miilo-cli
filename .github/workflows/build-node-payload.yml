@@ -29,7 +29,9 @@ jobs:
       working-directory: packages/miilo-cli-node
     - run: npm test
       working-directory: packages/miilo-cli-node
-    - run: npm pack --pack-destination ../../target/distrib
+    - run: |
+        mkdir -p ../../target/distrib
+        npm pack --pack-destination ../../target/distrib
       working-directory: packages/miilo-cli-node
     - run: |-
         python scripts/package-agent-plugin.py

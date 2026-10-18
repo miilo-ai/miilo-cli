@@ -10,6 +10,7 @@ import time
 import urllib.request
 import zipfile
 from version import read_version
+from archive_paths import validate_zip_members
 
 root = Path.cwd()
 for target in os.environ['TARGETS'].split(','):
@@ -19,8 +20,7 @@ for target in os.environ['TARGETS'].split(','):
         stage=Path(folder)
         if archives[0].suffix=='.zip':
             with zipfile.ZipFile(archives[0]) as archive:
-                for member in archive.namelist():
-                    if not (stage/member).resolve().is_relative_to(stage):raise RuntimeError('Unsafe archive member')
+                validate_zip_members(stage, archive.namelist())
                 archive.extractall(stage)
         else:
             with tarfile.open(archives[0]) as archive:archive.extractall(stage,filter='data')

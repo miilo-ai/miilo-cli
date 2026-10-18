@@ -5,11 +5,32 @@ description: Set up or diagnose read-only Miilo observation of explicitly select
 
 # Connect to Miilo
 
-Inspect `miilo --version` and `miilo --help`; published releases may predate the
-standalone candidate. Candidate 0.2 adds `miilo local ...` and a `miilo-local`
-compatibility executable. Use only commands actually present in the installation.
-Use an existing binary or an available release matching the OS/architecture;
-never invent a package publication or installer URL.
+Inspect `miilo --version` and `miilo --help`. CLI 0.2 provides local observation
+and a `miilo-local` compatibility executable. Use only commands actually present
+in the installation. Use an existing binary or an available release matching the
+OS/architecture; never invent a package publication or installer URL.
+
+## Choose the device and access boundary first
+
+Ask where the existing sessions run and where the user wants to view them.
+Local discovery reads only the executing device's filesystem; running discovery
+on a phone cannot inspect a laptop's sessions through Tailscale. For a remote
+phone view, obtain the operator's compatible observation endpoint and credential;
+keep the collector beside the original sessions. Local snapshot files are not
+remotely served by default. Stop if the required transport is not provisioned.
+
+Tailscale reachability, Miilo authentication, model authentication and SSH login
+are separate. Viewing remote work does not require copying SSH private keys or
+Codex auth caches, installing/signing into Codex on the phone, or modifying
+`/etc`. Do not scan credential stores, probe system directories for missing
+credentials, change server configuration or grant new access as an inferred fix.
+Ask the user to complete any coding-service login themselves, only if they
+explicitly want that agent running in this environment. Android/PRoot local
+collection is not implied by qualified Linux/macOS support.
+
+An emulator route, preview robots or Codex-named fixtures do not prove physical
+phone connectivity or real agent login. Missing credentials/permissions are a
+stop condition, not permission for repeated retries or disabling authentication.
 
 ## Local observation
 

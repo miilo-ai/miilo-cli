@@ -21,6 +21,7 @@ mod observation_ports;
 mod remote_run;
 mod selection;
 mod service;
+mod session_databases;
 mod sessions;
 mod wakeups;
 use files::{cache_path, config_path, home, private_read, save_config};

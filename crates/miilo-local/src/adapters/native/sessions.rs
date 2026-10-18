@@ -5,12 +5,14 @@ pub(super) fn provider_id(kind: &str, id: &str) -> String {
 pub(super) enum Tail {
     Codex(crate::codex::transcript::TranscriptTail),
     Cursor(crate::transcript::TranscriptTail),
+    Database(crate::session_database::DatabaseReader),
 }
 impl Tail {
     pub(super) fn read(&mut self, state: &mut Observation) -> Result<()> {
         match self {
             Self::Codex(t) => t.read(state),
             Self::Cursor(t) => t.read(state),
+            Self::Database(t) => t.read(state),
         }
     }
 }
@@ -32,14 +34,26 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
         let selected = match kind {
             "codex" => discovery::authorized_path(path, root)?,
             "cursor" => crate::cursor::discovery::authorized_path(path, root)?,
+            "opencode" | "devin" => crate::session_database::authorized_path(
+                path,
+                root,
+                crate::session_database::Agent::parse(kind)?,
+            )?,
             _ => return Err("Unsupported observation adapter".into()),
         };
         let tail = if kind == "codex" {
             Tail::Codex(crate::codex::transcript::TranscriptTail::new(selected))
-        } else {
+        } else if kind == "cursor" {
             Tail::Cursor(crate::transcript::TranscriptTail::new(
                 selected,
                 crate::cursor::transcript::apply,
+            ))
+        } else {
+            Tail::Database(crate::session_database::DatabaseReader::new(
+                selected,
+                root.to_path_buf(),
+                crate::session_database::Agent::parse(kind)?,
+                id.into(),
             ))
         };
         let name = format!(
@@ -50,7 +64,14 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
         let mut observation = Observation::new(
             &provider_id(kind, id),
             &name,
-            &format!("{kind}_transcript"),
+            &format!(
+                "{kind}_{}",
+                if matches!(kind, "opencode" | "devin") {
+                    "session"
+                } else {
+                    "transcript"
+                }
+            ),
             item,
         );
         // Enrollment or collector restart is not session activity.

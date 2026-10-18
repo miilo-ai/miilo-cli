@@ -39,3 +39,7 @@ pub mod adapters {
     pub use crate::cursor::transcript::apply as apply_cursor_activity;
     pub use crate::transcript::TranscriptTail;
 }
+
+#[cfg(unix)]
+#[path = "adapters/session_database/mod.rs"]
+pub mod session_database;

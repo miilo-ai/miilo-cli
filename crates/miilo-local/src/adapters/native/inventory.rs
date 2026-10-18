@@ -28,6 +28,18 @@ pub(super) async fn inventory(directory: &Path) -> Value {
             Err(_) => errors.push("Cursor discovery unavailable"),
         }
     }
-    let devin = json!({"available":false,"observationSupported":false,"reason":"Devin requires an explicitly configured adapter"});
+    for (agent, path) in super::session_databases::configured() {
+        if path.exists() {
+            match crate::session_database::sessions(&path, agent) {
+                Ok(items) => sessions.extend(items),
+                Err(_) => errors.push(if agent.kind() == "devin" {
+                    "Devin local discovery unavailable"
+                } else {
+                    "OpenCode local discovery unavailable"
+                }),
+            }
+        }
+    }
+    let devin = json!({"available":super::session_databases::configured().iter().any(|(agent,path)|agent.kind()=="devin"&&path.is_file()),"observationSupported":true,"scope":"local sessions only"});
     json!({"sessions":sessions,"errors":errors,"devin":devin,"scope":directory,"readOnly":true})
 }

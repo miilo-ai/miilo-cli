@@ -57,6 +57,7 @@ jobs:
           filename=$(echo "$release" | jq '.artifacts[] | select(endswith(".rb"))' --raw-output)
           name=${filename%.rb}
           version=$(echo "$release" | jq .app_version --raw-output)
+          python3 tools/prepare_formula.py "Formula/$filename" "v$version"
           brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict --fix "Formula/$filename"
           git add "Formula/$filename"
           if git diff --cached --quiet; then continue; fi

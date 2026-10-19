@@ -26,8 +26,11 @@ pub fn validate(value: &Value, folders: &dyn FolderMetadata) -> Result<Vec<Value
         {
             return Err("Give each group a unique name (up to 80 characters)".into());
         }
-        if !matches!(rule["kind"].as_str(), Some("codex" | "cursor" | "all")) {
-            return Err("Choose Codex, Cursor, or all supported agents".into());
+        if !matches!(
+            rule["kind"].as_str(),
+            Some("codex" | "cursor" | "opencode" | "devin" | "claude" | "grok" | "hermes" | "all")
+        ) {
+            return Err("Choose a supported agent or all supported agents".into());
         }
         if !Path::new(folder).is_absolute()
             || folder.contains(['*', '?'])
@@ -49,7 +52,10 @@ pub fn validate(value: &Value, folders: &dyn FolderMetadata) -> Result<Vec<Value
 }
 pub fn matches(rule: &Value, session: &Value, folders: &dyn FolderMetadata) -> bool {
     if session["observable"] != true
-        || !matches!(session["kind"].as_str(), Some("codex" | "cursor"))
+        || !matches!(
+            session["kind"].as_str(),
+            Some("codex" | "cursor" | "opencode" | "devin" | "claude" | "grok" | "hermes")
+        )
     {
         return false;
     }

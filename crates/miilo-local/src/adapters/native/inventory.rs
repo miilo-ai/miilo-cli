@@ -1,4 +1,16 @@
 use super::*;
+pub(super) fn claude_root() -> PathBuf {
+    env::var_os("CLAUDE_CONFIG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".claude"))
+        .join("projects")
+}
+pub(super) fn grok_root() -> PathBuf {
+    env::var_os("GROK_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".grok"))
+        .join("sessions")
+}
 pub(super) async fn inventory(directory: &Path) -> Value {
     let mut sessions = vec![];
     let mut errors = vec![];
@@ -28,6 +40,32 @@ pub(super) async fn inventory(directory: &Path) -> Value {
             Err(_) => errors.push("Cursor discovery unavailable"),
         }
     }
-    let devin = json!({"available":false,"observationSupported":false,"reason":"Devin requires an explicitly configured adapter"});
+    let grok = grok_root();
+    if grok.exists() {
+        match crate::grok::discovery::sessions(&grok) {
+            Ok(items) => sessions.extend(items),
+            Err(_) => errors.push("Grok local discovery unavailable"),
+        }
+    }
+    let claude = claude_root();
+    if claude.exists() {
+        match crate::claude::discovery::sessions(&claude) {
+            Ok(items) => sessions.extend(items),
+            Err(_) => errors.push("Claude Code local discovery unavailable"),
+        }
+    }
+    for (agent, path) in super::session_databases::configured() {
+        if path.exists() {
+            match crate::session_database::sessions(&path, agent) {
+                Ok(items) => sessions.extend(items),
+                Err(_) => errors.push(match agent.kind() {
+                    "devin" => "Devin local discovery unavailable",
+                    "hermes" => "Hermes local discovery unavailable",
+                    _ => "OpenCode local discovery unavailable",
+                }),
+            }
+        }
+    }
+    let devin = json!({"available":super::session_databases::configured().iter().any(|(agent,path)|agent.kind()=="devin"&&path.is_file()),"observationSupported":true,"scope":"local sessions only"});
     json!({"sessions":sessions,"errors":errors,"devin":devin,"scope":directory,"readOnly":true})
 }

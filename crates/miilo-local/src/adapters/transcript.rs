@@ -74,7 +74,13 @@ impl TranscriptTail {
         }
         // Timestamp-free history was written before this observer started.
         // File modification time is the best available activity bound.
-        if bootstrap && state.source == "cursor_transcript" && state.revision != initial_revision {
+        if bootstrap
+            && matches!(
+                state.source.as_str(),
+                "cursor_transcript" | "grok_transcript"
+            )
+            && state.revision != initial_revision
+        {
             state.observed_at = metadata
                 .modified()
                 .map(|at| chrono::DateTime::<chrono::Utc>::from(at).to_rfc3339())

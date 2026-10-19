@@ -22,7 +22,23 @@ pub(super) async fn resolve(mut chosen: Vec<Value>) -> Result<Vec<Value>> {
                 &root
             )?);
             item["root"] = json!(root);
-        } else {
+        } else if item["kind"] == "grok" {
+            let available = crate::grok::discovery::sessions(&super::inventory::grok_root())?;
+            let found = available
+                .iter()
+                .find(|s| s["id"] == item["id"])
+                .ok_or("Selected Grok session disappeared")?;
+            item["path"] = found["path"].clone();
+            item["root"] = found["root"].clone();
+        } else if item["kind"] == "claude" {
+            let available = crate::claude::discovery::sessions(&super::inventory::claude_root())?;
+            let found = available
+                .iter()
+                .find(|s| s["id"] == item["id"])
+                .ok_or("Selected Claude session disappeared")?;
+            item["path"] = found["path"].clone();
+            item["root"] = found["root"].clone();
+        } else if item["kind"] == "cursor" {
             let root = env::var_os("MIILO_CURSOR_PROJECTS")
                 .map(PathBuf::from)
                 .unwrap_or_else(|| home().join(".cursor/projects"));
@@ -33,6 +49,18 @@ pub(super) async fn resolve(mut chosen: Vec<Value>) -> Result<Vec<Value>> {
                 .ok_or("Selected Cursor session disappeared")?;
             item["path"] = found["path"].clone();
             item["root"] = json!(root);
+        } else {
+            let kind = item["kind"].as_str().ok_or("Missing session kind")?;
+            let (agent, path) = super::session_databases::configured()
+                .into_iter()
+                .find(|(agent, _)| agent.kind() == kind)
+                .ok_or("Unsupported session adapter")?;
+            let found = crate::session_database::sessions(&path, agent)?
+                .into_iter()
+                .find(|s| s["id"] == item["id"])
+                .ok_or("Selected database session disappeared")?;
+            item["path"] = found["path"].clone();
+            item["root"] = found["root"].clone();
         }
     }
     Ok(chosen)
@@ -54,7 +82,10 @@ pub(super) fn select(request: &Value, available: &Value) -> Result<Vec<Value>> {
             .find(|s| s["kind"] == item["kind"] && s["id"] == item["id"])
             .ok_or("A selected session is no longer available; refresh the list")?;
         if found["observable"] != true
-            || !matches!(found["kind"].as_str(), Some("codex" | "cursor"))
+            || !matches!(
+                found["kind"].as_str(),
+                Some("codex" | "cursor" | "opencode" | "devin" | "claude" | "grok" | "hermes")
+            )
         {
             return Err("This agent does not support local import yet".into());
         }

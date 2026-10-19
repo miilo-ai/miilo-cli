@@ -51,7 +51,7 @@ class WorkflowTests(unittest.TestCase):
                     if '@' in uses:
                         self.assertRegex(uses.rsplit('@', 1)[1], r'^[a-f0-9]{40}$')
 
-    def test_optional_homebrew_token_skips_before_checkout(self):
+    def test_homebrew_missing_token_fails_before_checkout(self):
         jobs = workflow('release.yml')['jobs']
         if 'publish-homebrew-formula' not in jobs:return
         steps = workflow('publish-homebrew.yml')['jobs']['publish']['steps']
@@ -59,7 +59,9 @@ class WorkflowTests(unittest.TestCase):
         checkout = next(s for s in steps if s.get('uses', '').startswith('actions/checkout@'))
         self.assertEqual(checkout['with']['ref'], 'main')
         self.assertEqual(checkout['with']['fetch-depth'], 0)
-        self.assertIn('No release has been made', steps[0]['run'])
+        self.assertIn('HOMEBREW_TAP_TOKEN is missing', steps[0]['run'])
+        self.assertIn('exit 1', steps[0]['run'])
+        self.assertNotIn('No release has been made', steps[0]['run'])
         for step in steps[1:]:
             gate = step['if']
             self.assertTrue("outputs.ready == 'true'" in gate or "steps.prepare.outputs.changed == 'true'" in gate)

@@ -35,17 +35,19 @@ jobs:
         working-directory: tap
     steps:
     - id: credentials
-      name: Optional tap publishing credential
+      name: Require tap publishing credential
       working-directory: .
       run: |
-        if [ -z "$TAP_TOKEN" ] || [ "$SOURCE_PRIVATE" = true ]; then
-          echo "ready=false" >> "$GITHUB_OUTPUT"
-          echo "No release has been made"
-          echo "Homebrew publication skipped; existing GitHub releases are unchanged." >> "$GITHUB_STEP_SUMMARY"
-          echo "No release has been made" >> "$GITHUB_STEP_SUMMARY"
-        else
-          echo "ready=true" >> "$GITHUB_OUTPUT"
+        set -euo pipefail
+        if [ -z "$TAP_TOKEN" ]; then
+          echo "::error::HOMEBREW_TAP_TOKEN is missing. Configure tap Contents and Pull requests read/write access. Existing CLI releases are unchanged."
+          exit 1
         fi
+        if [ "$SOURCE_PRIVATE" = true ]; then
+          echo "::error::Homebrew publication requires the public CLI repository."
+          exit 1
+        fi
+        echo "ready=true" >> "$GITHUB_OUTPUT"
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       if: steps.credentials.outputs.ready == 'true'
       with:

@@ -22,7 +22,7 @@ The CLI repository's ordinary `GITHUB_TOKEN` cannot write a separate tap reposit
 The token needs no branch-rule bypass or permission to change workflow files.
 A GitHub App installed only on the tap, with equivalent repository permissions,
 is an alternative for a dedicated bot identity. The PR author is the token owner;
-review/merge must follow the tap's rules and reviewer policy.
+the tap's GitHub Actions reviewer is a separate identity and its merge still follows native branch protection.
 
 ## Normal release
 
@@ -31,12 +31,17 @@ review/merge must follow the tap's rules and reviewer policy.
    review branch with a dry-run push before running installation tests.
 3. It prepares the official formula, audits and installs it, exercises its tests,
    and opens/reuses `release/miilo-vVERSION` as a PR to the tap's `main`.
-4. The tap's required macOS/Linux checks and review run normally. The workflow
-   never pushes `main`, force-updates a branch, approves or merges its own PR.
-5. After merge, `brew update` and `brew upgrade miilo-ai/cli/miilo` receive the update.
+4. The publisher requests squash auto-merge for the exact proposed commit. The tap's
+   trusted reviewer compares the formula with the prepared official release asset
+   and approves only canonical, formula-only stable-version updates. It never
+   checks out or executes PR code. Normal contributions still need maintainer review.
+5. GitHub merges after its required checks and review pass. The publisher never
+   pushes `main`, force-updates a branch or uses an admin bypass.
+6. After merge, `brew update` and `brew upgrade miilo-ai/cli/miilo` receive the update.
 
-A job reporting **PR opened** has proposed an update, not made the new formula
-available yet. A no-op run leaves an already-current formula unchanged.
+A job reporting **auto-merge requested** has queued an update, not made the new
+formula available yet. The formula becomes available when the PR reaches merged
+state. Failed checks keep the PR open. A no-op run leaves an already-current formula unchanged.
 
 ## Retry an already-published version
 
@@ -52,10 +57,26 @@ republish or move tags. Matching open PRs are reused. A differing existing branc
 is refused for review instead of overwritten. Old release runs use their old
 workflow revision; rerunning one does not pick up this fix.
 
-If no token is configured, optional publication is skipped with the established
-`No release has been made` receipt and a clarification that existing GitHub
-releases are unchanged. A present but unauthorized token fails the preflight
-with the exact repository and required permissions.
+A missing token now fails with an explicit Homebrew configuration error instead
+of a successful publication skip. A present but unauthorized token fails the
+preflight with the exact repository and required permissions. Neither failure
+deletes or changes an existing GitHub release.
 
 The tap's manual **Qualify CLI release import** workflow remains a read-only
 qualification tool, not a second publisher.
+
+## One-time tap settings
+
+Enable repository auto-merge and allow GitHub Actions to create and approve pull
+requests in `miilo-ai/homebrew-cli`. Keep default workflow permissions read-only.
+The dedicated review job requests only Contents read and Pull requests write.
+Keep required macOS/Linux tests, architecture/history checks, approving review,
+stale-review dismissal and branch-update requirements intact. No administrator
+bypass is used by this automation. If code-owner rules are added later, their
+review requirement must also be satisfied; automation does not override them.
+
+The reviewer accepts only `release/miilo-vVERSION` PRs within the canonical tap,
+changing only `Formula/miilo.rb`, with a published stable official release and a
+strictly newer version. Extra changes, forks, changed formula code or checksums,
+and a changed head/base commit fail closed. Read-only historical qualification is
+available through the tap's **Review official release formula** manual workflow.

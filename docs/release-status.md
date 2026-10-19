@@ -1,6 +1,6 @@
 # Release scope and validation
 
-Current published package: 0.3.0 (reviewed October 18, 2026).
+Current published package: 0.3.1 (reviewed October 19, 2026).
 For available assets and subsequent versions, use GitHub Releases and the package manifests.
 Documentation-only changes do not require a package version bump.
 
@@ -21,8 +21,9 @@ Local observation is read-only; provider actions require a separately connected 
   fractional scaling, large fleets and hidden/reduced-motion performance need their own evidence.
 - Marketplace approval and AUR availability require external confirmation; a public
   repository or GitHub release does not establish a store listing.
-- The protected Homebrew tap needs a PR-compatible publishing flow. Formula CI and
-  an existing published formula do not establish automatic future tap updates.
+- Homebrew publication proposes a formula PR after qualification; required tap
+  checks and maintainer review remain necessary before availability. Configure
+  the scoped credential described in [Homebrew publishing](homebrew-publishing.md).
 
 ## Documentation authority
 

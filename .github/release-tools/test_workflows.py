@@ -58,8 +58,29 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(steps[0]['id'], 'credentials')
         checkout = next(s for s in steps if s.get('uses', '').startswith('actions/checkout@'))
         self.assertEqual(checkout['with']['ref'], 'main')
+        self.assertEqual(checkout['with']['fetch-depth'], 0)
         self.assertIn('No release has been made', steps[0]['run'])
-        self.assertTrue(all("outputs.ready == 'true'" in step['if'] for step in steps[1:]))
+        for step in steps[1:]:
+            gate = step['if']
+            self.assertTrue("outputs.ready == 'true'" in gate or "steps.prepare.outputs.changed == 'true'" in gate)
+
+    def test_homebrew_uses_review_branch_and_same_scoped_pr_credential(self):
+        data = workflow('publish-homebrew.yml')
+        self.assertIn('workflow_dispatch', data['on'])
+        self.assertEqual(data['permissions'], {'contents': 'read'})
+        job = data['jobs']['publish']
+        self.assertEqual(job['env']['GH_TOKEN'], '${{ secrets.HOMEBREW_TAP_TOKEN }}')
+        script = '\n'.join(step.get('run', '') for step in job['steps'])
+        self.assertNotIn('git push', script)
+        self.assertIn('--preflight', script)
+        self.assertIn('--prepare', script)
+        self.assertIn('Open or reuse formula update PR', str(job['steps']))
+        self.assertNotIn('HEAD:main', script)
+        downloads = [step for step in job['steps'] if step.get('name', '').startswith('Fetch')]
+        self.assertEqual(len(downloads), 2)
+        self.assertIn("inputs.plan != ''", downloads[0]['if'])
+        self.assertIn("inputs.plan == ''", downloads[1]['if'])
+
 
 
 if __name__ == '__main__':unittest.main()

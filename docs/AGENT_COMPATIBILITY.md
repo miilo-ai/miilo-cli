@@ -11,7 +11,7 @@ start or resume agents, call models, sign users in, or require a Miilo server.
 | OpenCode | Local SQLite sessions, assistant text and tool names | SQLite schema qualified against 1.19.3 |
 | Devin CLI | Local SQLite sessions and assistant text on the current branch | Schema qualified against 3000.11.92; local CLI only |
 | Grok CLI | Selected `chat_history.jsonl`, visible assistant strings | Format 1, qualified against 1.0.60 |
-| Hermes | Local CLI sessions and active assistant message rows in SQLite | Published schema fixture qualified; live inference unavailable |
+| Hermes | Local CLI sessions and active assistant message rows in SQLite | Live discovery/import qualified on macOS; successful inference unverified |
 
 Claude Desktop chat, Cowork and Devin Cloud sessions are not covered by these adapters. A local
 Devin sign-in does not grant Miilo access to Devin Cloud sessions. The remote
@@ -95,10 +95,12 @@ per tool. Devin CLI 3000.11.92 returned the expected assistant reply. OpenCode
 HTTP 403; Miilo observed the normalized error. Source database and WAL bytes were
 unchanged during observation. Neither adapter exposed control actions.
 
-Successful OpenCode inference and natural ongoing activity remain unverified.
-Incremental WAL updates are covered by fixtures rather than additional live model
-requests. Model availability is an agent configuration concern, separate from
-observation compatibility. This validation does not qualify Devin Cloud support.
+OpenCode on macOS subsequently completed a user-started inference request. Discovery,
+explicit import and snapshot publication matched its visible assistant reply. A
+user-sent follow-up changed the summary through a running observer without restarting
+or reimporting the session. Neither snapshot exposed control actions. Model
+availability is an agent configuration concern, separate from observation
+compatibility. This validation does not qualify Devin Cloud support.
 
 Claude Code 2.1.300 on macOS was validated against an existing user-started session:
 discovery, explicit import and snapshot publication passed. A user-sent follow-up
@@ -113,4 +115,7 @@ from inference. Partial appends, privacy exclusions and replacement handling hav
 fixture coverage. Hermes 0.19.0 stopped before inference because no provider/model
 was configured; its local store was uninitialized. The Hermes reader has schema
 and WAL/privacy/isolation fixture coverage only, not a successful live session.
-Configure Hermes' own provider/model and create a session before enrolling it.
+On macOS, a user-created Hermes CLI session was discovered and explicitly imported;
+the snapshot exactly matched its visible cancellation response. This validates
+observation of real storage, not successful inference or a live follow-up. Configure
+Hermes' own provider/model and complete a prompt before claiming inference validation.

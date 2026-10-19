@@ -15,7 +15,11 @@
         "\\buse\\s+super::\\*",
         "\\b(?:fs|env|process|thread)::",
         "Uuid::new_v4\\(",
-        "Instant::now\\("
+        "Instant::now\\(",
+        "\\brusqlite::",
+        "crate::session_database::",
+        "crate::claude::",
+        "crate::grok::"
       ]
     }
   ],

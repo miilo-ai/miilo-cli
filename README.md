@@ -30,7 +30,9 @@ miilo local snapshot
 miilo local explain PROVIDER/WORK_ID
 ```
 
-Version 0.2 supports local Codex/Cursor observation on Linux/macOS. Discovery
+Local observation adapters cover Codex, Cursor, Claude Code, OpenCode, Devin CLI,
+Grok CLI and Hermes on Linux/macOS. See the compatibility matrix for version-qualified live validation.
+See the [compatibility and validation boundaries](docs/AGENT_COMPATIBILITY.md). Discovery
 does not start or resume work; import is explicit. Bootstrap history appears idle.
 Only sanitized assistant summaries/tool names are projected, not user messages,
 reasoning or tool inputs/outputs. This is activity observation, not authoritative

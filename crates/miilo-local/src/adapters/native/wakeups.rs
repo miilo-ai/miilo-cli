@@ -4,6 +4,7 @@ use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 pub(super) struct Wakeups {
     watcher: RecommendedWatcher,
     receiver: tokio::sync::mpsc::Receiver<()>,
+    paths: std::collections::BTreeSet<PathBuf>,
 }
 impl Wakeups {
     pub(super) fn new(config: &Value) -> Result<Self> {
@@ -15,7 +16,11 @@ impl Wakeups {
             notify::Config::default(),
         )
         .map_err(|_| "Cannot initialize native observation notifications")?;
-        let mut out = Self { watcher, receiver };
+        let mut out = Self {
+            watcher,
+            receiver,
+            paths: Default::default(),
+        };
         for session in config["sessions"].as_array().into_iter().flatten() {
             out.watch(Path::new(
                 session["path"]
@@ -26,6 +31,15 @@ impl Wakeups {
         Ok(out)
     }
     pub(super) fn watch(&mut self, path: &Path) -> Result<()> {
+        // SQLite activity may exist only in the WAL until checkpointing.
+        let path = if path.extension().is_some_and(|e| e == "db") {
+            path.parent().ok_or("Missing database directory")?
+        } else {
+            path
+        };
+        if !self.paths.insert(path.to_path_buf()) {
+            return Ok(());
+        }
         self.watcher
             .watch(path, RecursiveMode::NonRecursive)
             .map_err(|_| "Cannot watch selected transcript; reconnect explicitly".into())

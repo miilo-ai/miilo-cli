@@ -1,0 +1,34 @@
+[package]
+name = "miilo-pairing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Explicit read-only computer pairing for Miilo"
+
+[features]
+default = []
+server = ["dep:axum", "dep:hyper-util", "dep:tokio-rustls", "dep:rcgen", "dep:tokio"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+base64 = "0.22"
+sha2 = "0.10"
+subtle = "2.6"
+url = "2"
+rand = "0.9"
+tempfile = "3"
+fs2 = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+axum = { version = "0.8", optional = true }
+hyper-util = { version = "0.1", optional = true, features = ["server-auto", "service", "tokio"] }
+tokio-rustls = { version = "0.26", optional = true, default-features = false, features = ["ring", "tls12"] }
+rcgen = { version = "0.14", optional = true, default-features = false, features = ["ring", "pem"] }
+tokio = { version = "1", optional = true, features = ["net", "macros", "rt-multi-thread", "signal", "io-util", "sync", "time"] }
+
+[dev-dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

@@ -18,6 +18,7 @@ mod import_flow;
 mod inventory;
 mod local_run;
 mod observation_ports;
+mod pairing;
 mod remote_run;
 mod selection;
 mod service;
@@ -35,6 +36,8 @@ pub async fn execute(args: &[String]) -> Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| home()));
     match args.first().map(String::as_str) {
+        Some("share") => pairing::share(&args[1..]).await,
+        Some("pair") => pairing::pair(&args[1..]).await,
         Some("--version") => {
             println!("miilo-local {}", env!("CARGO_PKG_VERSION"));
             Ok(())
@@ -114,7 +117,7 @@ pub async fn execute(args: &[String]) -> Result<()> {
         }
         _ => {
             println!(
-                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | config paths|init|migrate|check | run [--once] | doctor | snapshot | explain <provider>/<work>"
+                "miilo local discover [PROJECT] | setup [PROJECT] | import | groups | config paths|init|migrate|check | run [--once] | doctor | snapshot | explain <provider>/<work> | share --bind ADDRESS:PORT --url HTTPS_ORIGIN --name NAME | pair invite|requests|approve|deny|devices|revoke|connect|list|snapshot|disconnect"
             );
             Ok(())
         }

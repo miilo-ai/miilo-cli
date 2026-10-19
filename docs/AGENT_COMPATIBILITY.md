@@ -11,7 +11,7 @@ start or resume agents, call models, sign users in, or require a Miilo server.
 | OpenCode | Local SQLite sessions, assistant text and tool names | SQLite schema qualified against 1.19.3 |
 | Devin CLI | Local SQLite sessions and assistant text on the current branch | Schema qualified against 3000.11.92; local CLI only |
 | Grok CLI | Selected `chat_history.jsonl`, visible assistant strings | Format 1, qualified against 1.0.60 |
-| Hermes | Local CLI sessions and active assistant message rows in SQLite | Live discovery/import qualified on macOS; successful inference unverified |
+| Hermes | Local CLI sessions and active assistant message rows in SQLite | Live replies and follow-up observation qualified against 0.22.2 on macOS |
 
 Claude Desktop chat, Cowork and Devin Cloud sessions are not covered by these adapters. A local
 Devin sign-in does not grant Miilo access to Devin Cloud sessions. The remote
@@ -57,6 +57,13 @@ and `messages` columns, selects unarchived `cli` sessions and `active=1` assista
 content, and excludes reasoning, tool-call payloads, messaging channels and archived
 generations. Missing tables fail closed without migrations. See the
 [upstream storage contract](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md).
+
+Use `hermes` for an interactive CLI session. Hermes 0.22.2 saves top-level `-z`
+and answer-and-exit invocations as `oneshot` sessions; these are outside this
+adapter's `cli`-only enrollment scope. Its agent runtime also requires a model
+endpoint serving at least 64,000 context tokens. Configure the actual server
+capacity rather than increasing only the client's context setting. See the
+[Hermes quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart/).
 
 For nonstandard storage, set `MIILO_OPENCODE_DB` or `MIILO_DEVIN_DB` to the absolute
 path of the corresponding database before discovery/import. The collector stores
@@ -112,10 +119,13 @@ tests. No Claude prompts were sent by Miilo or the validation tools.
 Grok CLI 1.0.60 completed one authorized harmless test prompt with the expected
 reply. Format-1 discovery/import and snapshot observation are validated separately
 from inference. Partial appends, privacy exclusions and replacement handling have
-fixture coverage. Hermes 0.19.0 stopped before inference because no provider/model
-was configured; its local store was uninitialized. The Hermes reader has schema
-and WAL/privacy/isolation fixture coverage only, not a successful live session.
-On macOS, a user-created Hermes CLI session was discovered and explicitly imported;
-the snapshot exactly matched its visible cancellation response. This validates
-observation of real storage, not successful inference or a live follow-up. Configure
-Hermes' own provider/model and complete a prompt before claiming inference validation.
+fixture coverage.
+
+Hermes 0.19.0 on Linux stopped before inference because no provider/model was
+configured. Hermes 0.22.2 on macOS subsequently completed authorized harmless
+prompts through a configured OpenAI-compatible endpoint serving 65,536 context
+tokens. A real interactive `cli` session passed discovery, explicit import and
+snapshot publication with an exact visible-reply match. A follow-up appeared
+through the running observer without restarting or reimporting. Both turns
+finished with zero tool calls; snapshots exposed no control actions. This
+qualifies session observation, not tool execution or messaging-gateway sessions.

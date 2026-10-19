@@ -31,7 +31,7 @@ miilo local explain PROVIDER/WORK_ID
 ```
 
 Local observation adapters cover Codex, Cursor, Claude Code, OpenCode, Devin CLI,
-Grok CLI and Hermes on Linux/macOS. Hermes currently has fixture validation only.
+Grok CLI and Hermes on Linux/macOS. See the compatibility matrix for version-qualified live validation.
 See the [compatibility and validation boundaries](docs/AGENT_COMPATIBILITY.md). Discovery
 does not start or resume work; import is explicit. Bootstrap history appears idle.
 Only sanitized assistant summaries/tool names are projected, not user messages,

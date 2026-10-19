@@ -8,14 +8,25 @@ coding service, or grant access to another computer.
 | Goal | Run the observer | Configure on the phone |
 | --- | --- | --- |
 | Observe sessions on this Linux/macOS computer | Beside the selected existing sessions | Nothing; use the local CLI or desktop plugin |
-| Observe that computer from a phone | On the computer that owns the sessions | A reachable Miilo observation endpoint and its credential |
+| Observe that computer from a phone | On the computer that owns the sessions | A pairing invitation, or a deployed observation endpoint and its credential |
 | Run a coding agent inside the phone's Linux environment | In that environment, if supported | The agent's own installation/login, separately from Miilo |
 
 `miilo local discover PROJECT` reads the filesystem of the machine executing it.
 Running it on a phone does not discover sessions on your laptop over Tailscale.
 Android/PRoot local collection is not qualified by the Linux/macOS support claim.
 
-## Observe existing work remotely
+## Pair directly without CE
+
+CLI 0.4.0 and widget helper 1.7.0 add explicit read-only computer pairing.
+Keep the selected-session collector running, start `miilo local share` on the
+computer, then create a private invitation with `miilo local pair invite`.
+On the receiver, choose **Settings → Pair computer**, compare both codes and
+approve on the host before selecting systems. No agent login or SSH key is copied.
+See [pair computers](computer-pairing.md) for commands, private-network setup,
+credential expiry, revocation and stale-state behavior. A physical phone still
+needs its own tested network route.
+
+## Use an existing deployed observation API
 
 1. On the session-owning computer, install the matching CLI release and explicitly
    select existing sessions with `miilo local setup PROJECT`. Keep its collector

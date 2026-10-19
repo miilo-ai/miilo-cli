@@ -50,6 +50,7 @@ Read [phone and remote setup](docs/PHONE_AND_REMOTE.md) before connecting a
 launcher. Run the observer where the sessions live; configure a reachable Miilo
 endpoint on the phone. Tailscale provides a route, not Miilo or Codex credentials.
 A standalone local collector does not automatically expose a remote API.
+For optional direct read-only pairing without CE, see [pair computers](docs/computer-pairing.md).
 
 ## Install
 

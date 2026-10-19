@@ -21,6 +21,28 @@
         "crate::claude::",
         "crate::grok::"
       ]
+    },
+    {
+      "name": "pairing-core",
+      "paths": [
+        "crates/miilo-pairing/src/domain.rs",
+        "crates/miilo-pairing/src/application.rs"
+      ],
+      "forbid": [
+        "\\b(?:axum|reqwest|sqlx|notify|tempfile)::",
+        "std::(?:fs|net|process|thread)",
+        "\\bSystemTime\\b",
+        "Utc::now\\(",
+        "crate::(?:adapters|config|engine|transport)::",
+        "\\buse\\s+super::\\*",
+        "\\b(?:fs|env|process|thread)::",
+        "Uuid::new_v4\\(",
+        "Instant::now\\(",
+        "\\brusqlite::",
+        "crate::session_database::",
+        "crate::claude::",
+        "crate::grok::"
+      ]
     }
   ],
   "existingSizeExceptions": {}

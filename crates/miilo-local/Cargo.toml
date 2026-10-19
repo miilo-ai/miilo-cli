@@ -19,5 +19,6 @@ url = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip", "brotli", "zstd"] }
 
 [target.'cfg(unix)'.dependencies]
+miilo-pairing = { path = "../miilo-pairing", features = ["server"] }
 libc = "0.2"
 rusqlite = { version = "0.37", features = ["bundled"] }

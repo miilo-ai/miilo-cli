@@ -30,6 +30,9 @@ mod codex;
 #[path = "adapters/cursor/mod.rs"]
 mod cursor;
 #[cfg(unix)]
+#[path = "adapters/grok/mod.rs"]
+mod grok;
+#[cfg(unix)]
 #[path = "adapters/transcript.rs"]
 mod transcript;
 
@@ -42,6 +45,8 @@ pub mod adapters {
     pub use crate::codex::transcript::TranscriptTail as CodexTranscriptTail;
     pub use crate::cursor::discovery as cursor_discovery;
     pub use crate::cursor::transcript::apply as apply_cursor_activity;
+    pub use crate::grok::discovery as grok_discovery;
+    pub use crate::grok::transcript::TranscriptTail as GrokTranscriptTail;
     pub use crate::transcript::TranscriptTail;
 }
 

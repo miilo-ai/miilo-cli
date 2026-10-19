@@ -1,4 +1,5 @@
 // Extract only assistant-visible text and bounded tool names, never raw JSON payloads.
+pub const HERMES: &str = "SELECT cast(id AS TEXT),cast(timestamp*1000 AS INTEGER),substr(content,1,280),CASE WHEN finish_reason IS NULL THEN 'active' ELSE 'waiting' END FROM messages WHERE session_id=?1 AND role='assistant' AND active=1 ORDER BY timestamp DESC,id DESC LIMIT 128";
 pub const OPENCODE: &str = "SELECT p.id,p.time_updated,
  CASE json_extract(p.data,'$.type') WHEN 'text' THEN substr(json_extract(p.data,'$.text'),1,280) WHEN 'tool' THEN 'Tool: ' || substr(json_extract(p.data,'$.tool'),1,80) END,
  CASE WHEN json_extract(m.data,'$.time.completed') IS NOT NULL THEN 'waiting' ELSE 'active' END

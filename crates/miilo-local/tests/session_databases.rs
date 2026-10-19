@@ -10,10 +10,12 @@ fn fixture(agent: Agent) -> (tempfile::TempDir, std::path::PathBuf, Connection) 
     match agent {
         Agent::OpenCode=>db.execute_batch("CREATE TABLE session(id TEXT PRIMARY KEY,title TEXT,directory TEXT,time_created INTEGER,time_updated INTEGER,time_archived INTEGER);CREATE TABLE message(id TEXT PRIMARY KEY,session_id TEXT,time_updated INTEGER,data TEXT);CREATE TABLE part(id TEXT PRIMARY KEY,message_id TEXT,session_id TEXT,time_updated INTEGER,data TEXT);").unwrap(),
         Agent::Devin=>db.execute_batch("CREATE TABLE sessions(id TEXT PRIMARY KEY,title TEXT,working_directory TEXT,created_at INTEGER,last_activity_at INTEGER,hidden INTEGER,main_chain_id INTEGER);CREATE TABLE message_nodes(node_id INTEGER,session_id TEXT,parent_node_id INTEGER,created_at INTEGER,chat_message TEXT);").unwrap(),
+        Agent::Hermes=>db.execute_batch("CREATE TABLE sessions(id TEXT PRIMARY KEY,title TEXT,cwd TEXT,started_at REAL,source TEXT,archived INTEGER);CREATE TABLE messages(id INTEGER,session_id TEXT,role TEXT,content TEXT,timestamp REAL,finish_reason TEXT,active INTEGER);").unwrap(),
     }
     let sql = match agent {
         Agent::OpenCode => "INSERT INTO session VALUES(?1,'Existing session',?2,1000,1000,NULL)",
         Agent::Devin => "INSERT INTO sessions VALUES(?1,'Existing session',?2,1,1,0,1)",
+        Agent::Hermes => "INSERT INTO sessions VALUES(?1,'Existing session',?2,1,'cli',0)",
     };
     db.execute(sql, params!["selected", temp.path().to_str()])
         .unwrap();
@@ -158,7 +160,7 @@ fn devin_uses_only_current_branch_and_public_assistant_content() {
 }
 #[test]
 fn paths_missing_schema_replacement_and_selected_session_fail_closed() {
-    for agent in [Agent::OpenCode, Agent::Devin] {
+    for agent in [Agent::OpenCode, Agent::Devin, Agent::Hermes] {
         let (temp, path, db) = fixture(agent);
         let mut reader = DatabaseReader::new(
             path.clone(),

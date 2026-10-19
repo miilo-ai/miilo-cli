@@ -18,7 +18,8 @@
         "Instant::now\\(",
         "\\brusqlite::",
         "crate::session_database::",
-        "crate::claude::"
+        "crate::claude::",
+        "crate::grok::"
       ]
     }
   ],

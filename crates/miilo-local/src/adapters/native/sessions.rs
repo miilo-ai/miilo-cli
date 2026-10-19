@@ -6,6 +6,7 @@ pub(super) enum Tail {
     Codex(crate::codex::transcript::TranscriptTail),
     Cursor(crate::transcript::TranscriptTail),
     Claude(crate::claude::transcript::TranscriptTail),
+    Grok(crate::grok::transcript::TranscriptTail),
     Database(crate::session_database::DatabaseReader),
 }
 impl Tail {
@@ -14,6 +15,7 @@ impl Tail {
             Self::Codex(t) => t.read(state),
             Self::Cursor(t) => t.read(state),
             Self::Claude(t) => t.read(state),
+            Self::Grok(t) => t.read(state),
             Self::Database(t) => t.read(state),
         }
     }
@@ -37,7 +39,8 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
             "codex" => discovery::authorized_path(path, root)?,
             "cursor" => crate::cursor::discovery::authorized_path(path, root)?,
             "claude" => crate::claude::discovery::authorized_path(path, root)?,
-            "opencode" | "devin" => crate::session_database::authorized_path(
+            "grok" => crate::grok::discovery::authorized_path(path, root)?,
+            "opencode" | "devin" | "hermes" => crate::session_database::authorized_path(
                 path,
                 root,
                 crate::session_database::Agent::parse(kind)?,
@@ -46,6 +49,8 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
         };
         let tail = if kind == "codex" {
             Tail::Codex(crate::codex::transcript::TranscriptTail::new(selected))
+        } else if kind == "grok" {
+            Tail::Grok(crate::grok::transcript::TranscriptTail::new(selected))
         } else if kind == "claude" {
             Tail::Claude(crate::claude::transcript::TranscriptTail::new(selected))
         } else if kind == "cursor" {
@@ -71,7 +76,7 @@ pub(super) fn sessions(config: &Value) -> Result<Vec<Session>> {
             &name,
             &format!(
                 "{kind}_{}",
-                if matches!(kind, "opencode" | "devin") {
+                if matches!(kind, "opencode" | "devin" | "hermes") {
                     "session"
                 } else {
                     "transcript"

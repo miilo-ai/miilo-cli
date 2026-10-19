@@ -32,15 +32,7 @@ pub(super) async fn install(configuration: &Path) -> Result<()> {
         quote(&format!("MIILO_LOCAL_CONFIG={}", configuration.display()))?
     );
     let mut additional = String::new();
-    for variable in [
-        "CODEX_HOME",
-        "MIILO_CURSOR_PROJECTS",
-        "XDG_STATE_HOME",
-        "XDG_DATA_HOME",
-        "MIILO_OPENCODE_DB",
-        "MIILO_DEVIN_DB",
-        "CLAUDE_CONFIG_DIR",
-    ] {
+    for variable in super::session_databases::SERVICE_VARIABLES {
         if let Ok(value) = env::var(variable) {
             additional.push_str(&format!(
                 "Environment={}\n",

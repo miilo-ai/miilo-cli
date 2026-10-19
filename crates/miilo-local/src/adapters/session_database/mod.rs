@@ -15,12 +15,14 @@ type Result<T> = std::result::Result<T, String>;
 pub enum Agent {
     OpenCode,
     Devin,
+    Hermes,
 }
 impl Agent {
     pub fn parse(kind: &str) -> Result<Self> {
         match kind {
             "opencode" => Ok(Self::OpenCode),
             "devin" => Ok(Self::Devin),
+            "hermes" => Ok(Self::Hermes),
             _ => Err("Unsupported database adapter".into()),
         }
     }
@@ -28,12 +30,14 @@ impl Agent {
         match self {
             Self::OpenCode => "opencode",
             Self::Devin => "devin",
+            Self::Hermes => "hermes",
         }
     }
     pub fn filename(self) -> &'static str {
         match self {
             Self::OpenCode => "opencode.db",
             Self::Devin => "sessions.db",
+            Self::Hermes => "state.db",
         }
     }
 }

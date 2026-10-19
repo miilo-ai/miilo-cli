@@ -12,6 +12,9 @@ pub fn sessions(path: &Path, agent: Agent) -> Result<Vec<Value>> {
         Agent::Devin => {
             "SELECT substr(id,1,256),substr(coalesce(title,'Local session'),1,280),substr(working_directory,1,4096),created_at,last_activity_at FROM sessions WHERE hidden=0 AND length(id)<=256 ORDER BY last_activity_at DESC LIMIT 100"
         }
+        Agent::Hermes => {
+            "SELECT substr(id,1,256),substr(coalesce(title,'Local session'),1,280),substr(cwd,1,4096),cast(started_at*1000 AS INTEGER),cast(coalesce((SELECT max(timestamp) FROM messages WHERE session_id=s.id AND active=1),started_at)*1000 AS INTEGER) FROM sessions s WHERE source='cli' AND archived=0 AND length(id)<=256 ORDER BY started_at DESC LIMIT 100"
+        }
     };
     let mut statement = db
         .prepare(sql)
@@ -35,7 +38,7 @@ pub fn sessions(path: &Path, agent: Agent) -> Result<Vec<Value>> {
         }
         let timestamp = |n| {
             match agent {
-                Agent::OpenCode => chrono::DateTime::from_timestamp_millis(n),
+                Agent::OpenCode | Agent::Hermes => chrono::DateTime::from_timestamp_millis(n),
                 Agent::Devin => chrono::DateTime::from_timestamp(n, 0),
             }
             .map(|t| t.to_rfc3339())

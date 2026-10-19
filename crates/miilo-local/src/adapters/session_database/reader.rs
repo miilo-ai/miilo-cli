@@ -35,6 +35,9 @@ impl DatabaseReader {
         let exists = match self.agent {
             Agent::OpenCode => "SELECT count(*) FROM session WHERE id=?1 AND time_archived IS NULL",
             Agent::Devin => "SELECT count(*) FROM sessions WHERE id=?1 AND hidden=0",
+            Agent::Hermes => {
+                "SELECT count(*) FROM sessions WHERE id=?1 AND source='cli' AND archived=0"
+            }
         };
         let found: i64 = db
             .query_row(exists, [&self.id], |r| r.get(0))
@@ -46,6 +49,7 @@ impl DatabaseReader {
         let sqls = match self.agent {
             Agent::OpenCode => vec![queries::OPENCODE, queries::OPENCODE_ERRORS],
             Agent::Devin => vec![queries::DEVIN],
+            Agent::Hermes => vec![queries::HERMES],
         };
         for sql in sqls {
             let mut statement = db.prepare(sql).map_err(|_| "Unsupported message schema")?;
@@ -65,7 +69,7 @@ impl DatabaseReader {
         }
         rows.sort_by(|a, b| {
             a.1.cmp(&b.1).then_with(|| match self.agent {
-                Agent::Devin => {
+                Agent::Devin | Agent::Hermes => {
                     a.0.parse::<i64>()
                         .unwrap_or(0)
                         .cmp(&b.0.parse::<i64>().unwrap_or(0))
@@ -87,7 +91,9 @@ impl DatabaseReader {
             let digest = Sha256::digest(format!("{time}:{lifecycle}:{text}").as_bytes()).to_vec();
             if self.seen.get(&id) != Some(&digest) {
                 let at = match self.agent {
-                    Agent::OpenCode => chrono::DateTime::from_timestamp_millis(time),
+                    Agent::OpenCode | Agent::Hermes => {
+                        chrono::DateTime::from_timestamp_millis(time)
+                    }
                     Agent::Devin => chrono::DateTime::from_timestamp(time, 0),
                 }
                 .ok_or("Invalid message timestamp")?

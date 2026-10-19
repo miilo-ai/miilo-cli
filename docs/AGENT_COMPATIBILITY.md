@@ -10,6 +10,8 @@ start or resume agents, call models, sign users in, or require a Miilo server.
 | Claude Code | Selected main-session JSONL, assistant text and tool names | Transcript shape qualified against 2.1.300 on macOS |
 | OpenCode | Local SQLite sessions, assistant text and tool names | SQLite schema qualified against 1.19.3 |
 | Devin CLI | Local SQLite sessions and assistant text on the current branch | Schema qualified against 3000.11.92; local CLI only |
+| Grok CLI | Selected `chat_history.jsonl`, visible assistant strings | Format 1, qualified against 1.0.60 |
+| Hermes | Local CLI sessions and active assistant message rows in SQLite | Published schema fixture qualified; live inference unavailable |
 
 Claude Desktop chat, Cowork and Devin Cloud sessions are not covered by these adapters. A local
 Devin sign-in does not grant Miilo access to Devin Cloud sessions. The remote
@@ -20,7 +22,7 @@ Miilo endpoint workflow remains separate.
 Run `miilo local discover /path/to/project`, then `miilo local setup /path/to/project`
 and choose the existing sessions to observe. The native launcher session picker
 consumes the same discovery/import contract. Folder groups support Codex, Cursor,
-Claude Code, OpenCode, Devin, or all supported sources. Existing enrollments are preserved.
+Claude Code, OpenCode, Devin, Grok, Hermes, or all supported sources. Existing enrollments are preserved.
 
 Default database locations follow `XDG_DATA_HOME`, or `~/.local/share`:
 
@@ -38,6 +40,23 @@ This adapter is version-qualified and observes appended public activity, not an
 authoritative view of conversation branches after rewinds or compaction. Unknown
 record/block types are ignored. No hooks, configuration edits or resumptions are
 required for existing sessions.
+
+Grok CLI uses `~/.grok/sessions/<workspace>/<session>/chat_history.jsonl`, or
+`$GROK_HOME/sessions`. Discovery verifies format-1 metadata in `summary.json`.
+Only assistant string records are observed; reasoning, system/user messages,
+tool payloads and unfamiliar shapes are ignored. Its history has no per-message
+timestamp, so bootstrap uses file modification time and later appends use receipt
+time. Rewinds/truncations require explicit reconnection. This covers the local
+[Grok CLI session store](https://docs.x.ai/build/features/sessions), not Grok web chat.
+
+Hermes uses `$HERMES_HOME/state.db` or `~/.hermes/state.db`; `MIILO_HERMES_DB` may
+select a nonstandard absolute database path. Set `HERMES_HOME` explicitly for a
+named profile; Miilo does not read Hermes' active-profile/configuration files or
+aggregate other profiles silently. The reader requires the published `sessions`
+and `messages` columns, selects unarchived `cli` sessions and `active=1` assistant
+content, and excludes reasoning, tool-call payloads, messaging channels and archived
+generations. Missing tables fail closed without migrations. See the
+[upstream storage contract](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md).
 
 For nonstandard storage, set `MIILO_OPENCODE_DB` or `MIILO_DEVIN_DB` to the absolute
 path of the corresponding database before discovery/import. The collector stores
@@ -87,3 +106,11 @@ appeared in a refreshed snapshot with a newer activity timestamp and changed
 assistant summary, without control actions. Continuous appended/partial records,
 unchanged polls, private-block exclusion and replacement protection passed fixture
 tests. No Claude prompts were sent by Miilo or the validation tools.
+
+Grok CLI 1.0.60 completed one authorized harmless test prompt with the expected
+reply. Format-1 discovery/import and snapshot observation are validated separately
+from inference. Partial appends, privacy exclusions and replacement handling have
+fixture coverage. Hermes 0.19.0 stopped before inference because no provider/model
+was configured; its local store was uninitialized. The Hermes reader has schema
+and WAL/privacy/isolation fixture coverage only, not a successful live session.
+Configure Hermes' own provider/model and create a session before enrolling it.

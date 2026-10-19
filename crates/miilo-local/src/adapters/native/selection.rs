@@ -22,6 +22,14 @@ pub(super) async fn resolve(mut chosen: Vec<Value>) -> Result<Vec<Value>> {
                 &root
             )?);
             item["root"] = json!(root);
+        } else if item["kind"] == "grok" {
+            let available = crate::grok::discovery::sessions(&super::inventory::grok_root())?;
+            let found = available
+                .iter()
+                .find(|s| s["id"] == item["id"])
+                .ok_or("Selected Grok session disappeared")?;
+            item["path"] = found["path"].clone();
+            item["root"] = found["root"].clone();
         } else if item["kind"] == "claude" {
             let available = crate::claude::discovery::sessions(&super::inventory::claude_root())?;
             let found = available
@@ -76,7 +84,7 @@ pub(super) fn select(request: &Value, available: &Value) -> Result<Vec<Value>> {
         if found["observable"] != true
             || !matches!(
                 found["kind"].as_str(),
-                Some("codex" | "cursor" | "opencode" | "devin" | "claude")
+                Some("codex" | "cursor" | "opencode" | "devin" | "claude" | "grok" | "hermes")
             )
         {
             return Err("This agent does not support local import yet".into());

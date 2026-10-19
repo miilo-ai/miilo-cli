@@ -6,6 +6,14 @@ pub(super) fn configured() -> Vec<(Agent, PathBuf)> {
         .unwrap_or_else(|| home().join(".local/share"));
     [
         (
+            Agent::Hermes,
+            "MIILO_HERMES_DB",
+            env::var_os("HERMES_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| home().join(".hermes"))
+                .join("state.db"),
+        ),
+        (
             Agent::OpenCode,
             "MIILO_OPENCODE_DB",
             data.join("opencode/opencode.db"),
@@ -25,3 +33,15 @@ pub(super) fn configured() -> Vec<(Agent, PathBuf)> {
     })
     .collect()
 }
+pub(super) const SERVICE_VARIABLES: &[&str] = &[
+    "CODEX_HOME",
+    "MIILO_CURSOR_PROJECTS",
+    "XDG_STATE_HOME",
+    "XDG_DATA_HOME",
+    "MIILO_OPENCODE_DB",
+    "MIILO_DEVIN_DB",
+    "CLAUDE_CONFIG_DIR",
+    "GROK_HOME",
+    "HERMES_HOME",
+    "MIILO_HERMES_DB",
+];

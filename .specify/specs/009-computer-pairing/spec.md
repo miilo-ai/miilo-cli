@@ -1,6 +1,6 @@
 # Read-only computer pairing
 
-Status: implementation and acceptance validation in progress.
+Status: implemented and validated on native clients and an Android emulator; awaiting merge and release.
 
 ## Behavior
 

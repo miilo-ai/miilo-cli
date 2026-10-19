@@ -95,6 +95,11 @@ upgrade. Older OpenCode JSON-directory storage is not supported by this adapter.
 Adapter fixtures cover WAL writes, updated text, privacy exclusions, Devin branch
 isolation, provider isolation, polling stability and invalid storage.
 
+An existing Cursor transcript on macOS passed discovery, explicit import and
+snapshot publication with visible assistant activity. Repeated observation left
+the source file unchanged and exposed no control actions. A fresh live Cursor
+follow-up remains unverified; incremental transcript appends have fixture coverage.
+
 Native Linux acceptance on October 18, 2026 exercised discovery, explicit import
 and snapshot publication using isolated profiles and one authorized test session
 per tool. Devin CLI 3000.11.92 returned the expected assistant reply. OpenCode

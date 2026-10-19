@@ -1,5 +1,8 @@
 # Candidate implementation and handoff
 
+> Retained design record. Unchecked historical milestones are not a current release checklist. See docs/release-status.md for current scope and outstanding validation.
+
+
 Candidate: 0.2.0. Responsibility: Public local adapters/engine, native compatibility executable, Node delegation and remote clients.
 
 ## Shared boundaries

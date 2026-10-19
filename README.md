@@ -191,3 +191,5 @@ its original path, referenced by `localConfigFile`, so enrolled sessions,
 service configuration and cache locations remain intact. Environment overrides
 `MIILO_LOCAL_CONFIG` and `MIILO_OWL_CONFIG_DIR` continue to take precedence.
 Keyring conversion is not implemented by this migration.
+
+Release scope and remaining validation: [release status](docs/release-status.md).

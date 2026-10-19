@@ -1,5 +1,8 @@
 # Standalone runtime and optional hosting
 
+> Retained design record. Unchecked historical milestones are not a current release checklist. See docs/release-status.md for current scope and outstanding validation.
+
+
 Public local adapters and standalone engine/CLI; optional HTTP client remains.
 
 ## Contract

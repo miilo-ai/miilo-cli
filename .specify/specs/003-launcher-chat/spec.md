@@ -1,5 +1,8 @@
 # Chat-first launcher experience
 
+> Retained design record. Unchecked historical milestones are not a current release checklist. See docs/release-status.md for current scope and outstanding validation.
+
+
 Status: in progress, 2026-10-17. No release or native acceptance is implied.
 
 ## Goal and boundaries

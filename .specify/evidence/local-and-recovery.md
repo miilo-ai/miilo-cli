@@ -1,5 +1,8 @@
 # Local and recovery evidence — macOS arm64, 2026-10-16/17
 
+> Historical validation record. Results apply only to the revision and environment recorded below; they do not describe current release readiness.
+
+
 Rust workspace: 16 tests passed, including command-level isolated import, natural
 fixture append, private-data exclusion, exact-subject explanation, stale/private
 file rejection, public Codex partial parsing, replacement/truncation/symlink rejection,

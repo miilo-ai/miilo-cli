@@ -1,5 +1,8 @@
 # Architecture boundary checkpoint
 
+> Historical validation record. Results apply only to the revision and environment recorded below; they do not describe current release readiness.
+
+
 Domain/application code depends on explicit ports; executable/runtime adapters
 compose concrete infrastructure. `.specify/architecture.json` and its CI workflow
 check inward dependencies and module sizes. Negative tests prove reversed imports

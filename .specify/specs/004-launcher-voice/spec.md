@@ -1,5 +1,8 @@
 # Launcher speech follow-up (VOICE-001)
 
+> Retained design record. Unchecked historical milestones are not a current release checklist. See docs/release-status.md for current scope and outstanding validation.
+
+
 Status: deferred, not implemented for the launcher chat release.
 Existing web/mobile/provider speech contracts and implementations stay intact.
 

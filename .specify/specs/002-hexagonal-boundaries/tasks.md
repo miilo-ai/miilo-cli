@@ -1,5 +1,8 @@
 # Boundary checklist
 
+> Retained design record. Unchecked historical milestones are not a current release checklist. See docs/release-status.md for current scope and outstanding validation.
+
+
 - [x] Checkpoint existing work and commit the engineering constitution first.
 - [x] Separate the identified core policy/use cases from concrete infrastructure.
 - [x] Preserve static imports and focused modules.

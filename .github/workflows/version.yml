@@ -8,7 +8,7 @@ name: Version and tag
       publish:
         type: boolean
         default: false
-        description: Authorize candidate tagging and release dispatch
+        description: Manually authorize tagging and release dispatch; main version bumps release automatically
 permissions:
   contents: read
 concurrency:
@@ -36,7 +36,7 @@ jobs:
       run: python .github/release-tools/publication.py
       env:
         MIILO_RELEASE_ENABLED: ${{ vars.MIILO_RELEASE_ENABLED }}
-        MIILO_PUBLISH: ${{ inputs.publish }}
+        MIILO_PUBLISH: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIILO_RELEASE_ENABLED != 'false') || inputs.publish == true }}
         RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DEPENDENCIES_READY: 'true'
   qualify:

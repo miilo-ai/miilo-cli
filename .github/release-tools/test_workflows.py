@@ -21,6 +21,16 @@ class WorkflowTests(unittest.TestCase):
                 self.assertIn("outputs.publish == 'true'", jobs[name]['if'])
         self.assertIn('No release has been made', str(jobs['no-release']))
 
+    def test_main_version_bump_authorizes_release_by_default(self):
+        jobs = workflow('version.yml')['jobs']
+        policy = next(s for s in jobs['candidate']['steps'] if s.get('id') == 'policy')
+        expression = policy['env']['MIILO_PUBLISH']
+        self.assertIn("github.event_name == 'push'", expression)
+        self.assertIn("github.ref == 'refs/heads/main'", expression)
+        self.assertIn("vars.MIILO_RELEASE_ENABLED != 'false'", expression)
+        self.assertIn("inputs.publish == true", expression)
+        self.assertIn("outputs.new == 'true'", jobs['qualify']['if'])
+
     def test_auto_tag_never_overwrites_and_dispatches_explicitly(self):
         jobs = workflow('version.yml')['jobs']
         self.assertIn('qualify', jobs['tag']['needs'])

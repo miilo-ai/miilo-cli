@@ -1,4 +1,4 @@
-name: Optional Homebrew publishing
+name: Homebrew update pull request
 'on':
   workflow_call:
     inputs:
@@ -8,81 +8,102 @@ name: Optional Homebrew publishing
     secrets:
       HOMEBREW_TAP_TOKEN:
         required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+        description: Published stable CLI tag to import into the tap
 permissions:
   contents: read
+concurrency:
+  group: homebrew-formula-update
+  cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-22.04
+    environment: homebrew
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       PLAN: ${{ inputs.plan }}
-      GITHUB_USER: axo bot
-      GITHUB_EMAIL: admin+bot@axo.dev
+      RELEASE_TAG: ${{ inputs.tag }}
       TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       SOURCE_PRIVATE: ${{ github.event.repository.private }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: tap
     steps:
     - id: credentials
       name: Optional tap publishing credential
-      run: |-
+      working-directory: .
+      run: |
         if [ -z "$TAP_TOKEN" ] || [ "$SOURCE_PRIVATE" = true ]; then
           echo "ready=false" >> "$GITHUB_OUTPUT"
           echo "No release has been made"
+          echo "Homebrew publication skipped; existing GitHub releases are unchanged." >> "$GITHUB_STEP_SUMMARY"
           echo "No release has been made" >> "$GITHUB_STEP_SUMMARY"
         else
           echo "ready=true" >> "$GITHUB_OUTPUT"
         fi
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      if: steps.credentials.outputs.ready == 'true'
       with:
-        persist-credentials: true
         repository: miilo-ai/homebrew-cli
         token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        persist-credentials: true
         ref: main
+        fetch-depth: 0
+        path: tap
+    - name: Validate version and tap branch access
+      id: target
       if: steps.credentials.outputs.ready == 'true'
-    - name: Fetch homebrew formulae
-      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-      with:
-        path: Formula/
-        merge-multiple: true
-        name: artifacts-build-global
-      if: steps.credentials.outputs.ready == 'true'
-    - name: Commit formula files
       run: |
         set -euo pipefail
-        git config user.name "$GITHUB_USER"
-        git config user.email "$GITHUB_EMAIL"
-        export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-        changed=0
-        names=()
-        for release in $(echo "$PLAN" | jq --compact-output '.releases[] | select([.artifacts[] | endswith(".rb")] | any)'); do
-          filename=$(echo "$release" | jq '.artifacts[] | select(endswith(".rb"))' --raw-output)
-          name=${filename%.rb}
-          version=$(echo "$release" | jq .app_version --raw-output)
-          python3 tools/prepare_formula.py "Formula/$filename" "v$version"
-          brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict --fix "Formula/$filename"
-          git add "Formula/$filename"
-          if git diff --cached --quiet; then continue; fi
-          git commit -m "$name $version"
-          names+=("$name")
-          changed=1
-        done
-        if [ "$changed" = 0 ]; then
-          echo 'No release has been made'
-          echo 'No release has been made' >> "$GITHUB_STEP_SUMMARY"
-          exit 0
-        fi
-        brew tap miilo-ai/cli "$GITHUB_WORKSPACE"
-        for name in "${names[@]}"; do
-          brew audit --strict "miilo-ai/cli/$name"
-          brew install "miilo-ai/cli/$name"
-          brew test "miilo-ai/cli/$name"
-          "$name" --version
-          if [ "$name" = miilo ]; then
-            "$(brew --prefix "miilo-ai/cli/$name")/bin/miilo-local" --version
-          fi
-          brew uninstall "miilo-ai/cli/$name"
-        done
-        git push
+        args=(--plan)
+        if [ -n "$RELEASE_TAG" ]; then args=(--tag "$RELEASE_TAG"); fi
+        tag=$(python3 tools/publish_formula_pr.py "${args[@]}" --print-tag)
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        python3 tools/publish_formula_pr.py --tag "$tag" --preflight
+    - name: Fetch generated formula artifact
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      if: steps.credentials.outputs.ready == 'true' && inputs.plan != ''
+      with:
+        path: tap/Formula/
+        merge-multiple: true
+        name: artifacts-build-global
+    - name: Fetch existing published release formula
+      if: steps.credentials.outputs.ready == 'true' && inputs.plan == ''
+      env:
+        TAG: ${{ steps.target.outputs.tag }}
+      run: gh release download "$TAG" --repo miilo-ai/miilo-cli --pattern miilo.rb --dir Formula --clobber
+    - name: Prepare review branch
+      id: prepare
       if: steps.credentials.outputs.ready == 'true'
-    permissions:
-      contents: read
-    environment: homebrew
+      env:
+        TAG: ${{ steps.target.outputs.tag }}
+      run: |
+        set -euo pipefail
+        export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+        git config user.name 'Miilo release automation'
+        git config user.email 'release@users.noreply.github.com'
+        python3 tools/prepare_formula.py Formula/miilo.rb "$TAG"
+        brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict --fix Formula/miilo.rb
+        python3 tools/publish_formula_pr.py --tag "$TAG" --prepare
+    - name: Audit and exercise generated formula
+      if: steps.prepare.outputs.changed == 'true'
+      run: |
+        set -euo pipefail
+        export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+        brew tap miilo-ai/cli "$GITHUB_WORKSPACE/tap"
+        brew audit --strict miilo-ai/cli/miilo
+        brew install miilo-ai/cli/miilo
+        brew test miilo-ai/cli/miilo
+        bash tools/test-archive-install.sh "$(brew --prefix miilo-ai/cli/miilo)/bin/miilo"
+        "$(brew --prefix miilo-ai/cli/miilo)/bin/miilo-local" --version
+        brew uninstall miilo-ai/cli/miilo
+    - name: Open or reuse formula update PR
+      if: steps.prepare.outputs.changed == 'true'
+      env:
+        TAG: ${{ steps.target.outputs.tag }}
+      run: python3 tools/publish_formula_pr.py --tag "$TAG"

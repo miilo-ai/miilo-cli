@@ -11,3 +11,13 @@ jobs:
   qualification:
     uses: ./.github/workflows/qualify.yml
     secrets: inherit
+    needs: release-rehearsal
+    if: always()
+    with:
+      artifacts-ready: ${{ needs.release-rehearsal.result == 'success' }}
+  release-rehearsal:
+    uses: ./.github/workflows/build-release-artifacts.yml
+    with:
+      ref: ${{ github.sha }}
+    permissions:
+      contents: read

@@ -7,8 +7,6 @@ name: Node and agent payloads
         required: true
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 jobs:
   package:
     runs-on: ubuntu-22.04
@@ -22,7 +20,7 @@ jobs:
         python-version: '3.13'
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
       with:
-        node-version: 20.19
+        node-version: '24'
         cache: npm
         cache-dependency-path: packages/miilo-cli-node/package-lock.json
     - run: npm ci --ignore-scripts
@@ -36,10 +34,6 @@ jobs:
     - run: |-
         python scripts/package-agent-plugin.py
         (cd target/distrib && sha256sum *.tgz *.zip > NODE-AND-SKILL-SHA256SUMS)
-    - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
-      if: github.event.repository.private == false
-      with:
-        subject-path: target/distrib/*
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: artifacts-node-package
@@ -47,5 +41,3 @@ jobs:
         if-no-files-found: error
     permissions:
       contents: read
-      id-token: write
-      attestations: write

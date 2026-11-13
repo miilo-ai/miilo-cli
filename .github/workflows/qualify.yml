@@ -6,6 +6,9 @@ name: Candidate qualification
         type: string
         required: false
         default: ''
+      artifacts-ready:
+        type: boolean
+        default: true
     secrets:
       MIILO_SDK_READ_TOKEN:
         required: false
@@ -25,6 +28,11 @@ jobs:
     outputs:
       ready: ${{ steps.result.outputs.ready }}
     steps:
+    - name: Require successful release artifact rehearsal
+      if: inputs.artifacts-ready != true
+      run: |-
+        echo "Release artifact rehearsal failed; publication is not qualified" >&2
+        exit 1
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         fetch-depth: 0
@@ -40,8 +48,8 @@ jobs:
     - run: python -m unittest discover -s .github/release-tools -p "test_*.py" -v
     - run: python .github/release-tools/version.py --tag "$RELEASE_TAG"
       env:
-        RELEASE_TAG: ${{ startsWith(inputs.ref, 'refs/tags/') && inputs.ref || startsWith(inputs.ref, 'v') && inputs.ref ||
-          '' }}
+        RELEASE_TAG: ${{ startsWith(inputs.ref, 'refs/tags/') && inputs.ref || startsWith(inputs.ref, 'v') && inputs.ref
+          || '' }}
     - uses: ./.github/actions/sdk-access
       id: sdk
       with:
@@ -60,11 +68,10 @@ jobs:
     - run: scripts/test-node-package.sh
     - run: python scripts/package-agent-plugin.py
     - run: cargo fmt --all --check
-    - run: 'cargo clippy --workspace --all-targets --locked -- -D warnings
-
+    - run: |-
+        cargo clippy --workspace --all-targets --locked -- -D warnings
         cargo test --workspace --locked
-
-        cargo build --workspace --locked'
+        cargo build --workspace --locked
       if: steps.sdk.outputs.ready == 'true'
     - run: npm --prefix packages/miilo-cli-node run test:native
       if: steps.sdk.outputs.ready == 'true'

@@ -17,6 +17,36 @@ Claude Desktop chat, Cowork and Devin Cloud sessions are not covered by these ad
 Devin sign-in does not grant Miilo access to Devin Cloud sessions. The remote
 Miilo endpoint workflow remains separate.
 
+## Does Miilo show tool calls live?
+
+For supported sources, the running local collector updates observations as the
+agent writes its selected transcript or commits session-database changes. It does
+not intercept tool execution or subscribe directly to every agent's internal event
+stream. What appears depends on what the source records and its adapter supports:
+
+| Source | Tool activity shown |
+| --- | --- |
+| Codex | Bounded tool names on call records; a generic completion event on output records |
+| Cursor | Bounded tool names in assistant `tool_use` blocks |
+| Claude Code | Bounded tool names in assistant `tool_use` blocks |
+| OpenCode | Bounded tool names from assistant tool parts |
+| Devin CLI | Visible assistant text; no structured tool-call extraction |
+| Grok CLI | Visible assistant string records; tool payloads are excluded |
+| Hermes | Active visible assistant text; tool-call payloads are excluded |
+
+Tool arguments and results are not forwarded. A source that has not yet persisted
+an event cannot be shown, and some sources persist a complete message only after
+generation. These observations are not a complete tool audit trail or proof of
+success.
+
+Filesystem notifications wake fresh reads of selected transcripts and SQLite
+database/WAL changes. The collector coalesces notifications for 75 ms and has a
+five-second fallback heartbeat. That is a collection mechanism, not a guaranteed
+end-to-end latency: agent writes, filesystem delivery, parsing and the client's
+own refresh interval all contribute. Run `miilo local run` continuously for live
+updates; a one-shot snapshot does not keep collecting. See [validation scope](#validation-scope)
+for the distinction between fixture coverage and live provider checks.
+
 ## Onboarding
 
 Run `miilo local discover /path/to/project`, then `miilo local setup /path/to/project`

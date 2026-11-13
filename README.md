@@ -34,6 +34,8 @@ Local observation adapters cover Codex, Cursor, Claude Code, OpenCode, Devin CLI
 Grok CLI and Hermes on Linux/macOS. See the compatibility matrix for version-qualified live validation.
 See the [compatibility and validation boundaries](docs/AGENT_COMPATIBILITY.md). Discovery
 does not start or resume work; import is explicit. Bootstrap history appears idle.
+For per-source tool coverage and update timing, see
+[Does Miilo show tool calls live?](docs/AGENT_COMPATIBILITY.md#does-miilo-show-tool-calls-live).
 Only sanitized assistant summaries/tool names are projected, not user messages,
 reasoning or tool inputs/outputs. This is activity observation, not authoritative
 execution or approval detection. The CLI remains read-only. Windows supports the

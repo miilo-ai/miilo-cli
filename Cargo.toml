@@ -1,9 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["crates/miilo-client", "crates/miilo-cli", "crates/miilo-local", "crates/miilo-pairing"]
+members = ["crates/miilo-client", "crates/miilo-cli", "crates/miilo-local", "crates/miilo-pairing", "crates/miilo-telemetry"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ authors = ["Miilo contributors"]
 publish = false
 
 [workspace.dependencies]
-miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "40c2008207ae8abac2b82eeca7511ad6bf665d35" }
+miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "eab1561adc5015393d4b20ab502545b0554a3716" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

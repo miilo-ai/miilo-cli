@@ -1,14 +1,17 @@
 mod args;
 mod credentials;
 mod output;
+mod telemetry;
 mod watch;
+mod work;
 
-use args::{Args, Command, ConnectionsCommand, WorkCommand, parse_target};
+use args::{Args, Command, ConnectionsCommand, WorkCommand};
 use clap::Parser;
 use miilo_adapter_sdk::WorkItem;
 use miilo_client::{ExplanationPreferences, ExplanationRequest, MiiloClient};
 use serde::Serialize;
 use std::process::ExitCode;
+use work::find_work;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,13 +82,30 @@ async fn main() -> ExitCode {
         Ok(client) => client,
         Err(error) => return fail(error),
     };
-    match run(&client, args).await {
+    let telemetry = match telemetry::start(&args.command).await {
+        Ok(value) => value,
+        Err(error) => return fail(error),
+    };
+    let result = if telemetry.is_some() {
+        tokio::select! {
+            result = run(&client, args, telemetry.as_ref()) => result,
+            _ = tokio::signal::ctrl_c() => Err("operation cancelled".into()),
+        }
+    } else {
+        run(&client, args, None).await
+    };
+    telemetry::shutdown(telemetry).await;
+    match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => fail(error),
     }
 }
 
-async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+async fn run(
+    client: &MiiloClient,
+    args: Args,
+    telemetry: Option<&miilo_telemetry::Telemetry>,
+) -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
         Command::Local { .. } | Command::Archive { .. } | Command::Config { .. } => {
             unreachable!("local commands are dispatched before HTTP configuration")
@@ -138,10 +158,13 @@ async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error:
             }
         }
         Command::Work {
-            command: WorkCommand::Explain { target, question },
+            command: WorkCommand::Explain {
+                target, question, ..
+            },
         } => {
             let item = find_work(client, &target).await?;
-            let bundle = client
+            let operation = telemetry.map(|telemetry| telemetry.explanation());
+            let result = client
                 .explain(&ExplanationRequest {
                     provider_id: item.provider_id,
                     work_item_id: item.id,
@@ -151,7 +174,14 @@ async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error:
                     question,
                     preferences: ExplanationPreferences::default(),
                 })
-                .await?;
+                .await;
+            if let Some(operation) = operation {
+                operation.finish(match &result {
+                    Ok(_) => miilo_telemetry::Outcome::Success,
+                    Err(error) => telemetry::outcome(error),
+                });
+            }
+            let bundle = result?;
             if args.json {
                 output::json(&bundle)?;
             } else {
@@ -161,20 +191,6 @@ async fn run(client: &MiiloClient, args: Args) -> Result<(), Box<dyn std::error:
         Command::Watch => watch::watch(client, args.json).await?,
     }
     Ok(())
-}
-
-async fn find_work(
-    client: &MiiloClient,
-    target: &str,
-) -> Result<WorkItem, Box<dyn std::error::Error>> {
-    let (provider_id, work_item_id) = parse_target(target).map_err(std::io::Error::other)?;
-    client
-        .snapshot()
-        .await?
-        .work_items
-        .into_iter()
-        .find(|item| item.provider_id == provider_id && item.id == work_item_id)
-        .ok_or_else(|| format!("work item {target} was not found").into())
 }
 
 fn fail(error: impl std::fmt::Display) -> ExitCode {

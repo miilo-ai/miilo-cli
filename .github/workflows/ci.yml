@@ -7,6 +7,9 @@ name: CI
     - main
 permissions:
   contents: read
+concurrency:
+  group: cli-qualification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   qualification:
     uses: ./.github/workflows/qualify.yml

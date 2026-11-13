@@ -42,7 +42,7 @@ install-path = "CARGO_HOME"
 install-success-msg = "Miilo is installed. Run `miilo doctor` to verify your connection."
 # Whether to enable GitHub Attestations
 github-attestations = true
-github-custom-runners = { aarch64-unknown-linux-gnu = "ubuntu-24.04-arm" }
+github-custom-runners = { aarch64-unknown-linux-gnu = "ubuntu-24.04-arm", aarch64-apple-darwin = "macos-15", x86_64-apple-darwin = "macos-15-intel" }
 # Whether to install an updater program
 install-updater = false
 

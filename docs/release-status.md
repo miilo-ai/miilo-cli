@@ -1,6 +1,8 @@
 # Release scope and validation
 
-Current published package: 0.3.1 (reviewed October 19, 2026).
+Current published package: 0.4.0 (reviewed November 12, 2026).
+The 0.5.0 source candidate adds optional metadata-only operation tracing; it is
+not an already-published binary. See [operation tracing](telemetry.md).
 For available assets and subsequent versions, use GitHub Releases and the package manifests.
 Documentation-only changes do not require a package version bump.
 

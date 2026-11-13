@@ -1,0 +1,247 @@
+# Artifact stages originate from cargo-dist v0.33.0.
+# Copyright 2022-2024, axodotdev
+# SPDX-License-Identifier: MIT OR Apache-2.0
+name: Release artifact rehearsal
+'on':
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+    outputs:
+      val:
+        value: ${{ jobs.plan.outputs.val }}
+      tag:
+        value: ${{ jobs.plan.outputs.tag }}
+      tag-flag:
+        value: ${{ jobs.plan.outputs.tag-flag }}
+      ready:
+        value: ${{ jobs.ready.outputs.ready }}
+    secrets:
+      MIILO_SDK_READ_TOKEN:
+        required: false
+      MIILO_WORKSPACE_READ_TOKEN:
+        required: false
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    outputs:
+      val: ${{ steps.plan.outputs.manifest }}
+      tag: ${{ steps.version.outputs.tag }}
+      tag-flag: ${{ format('--tag={0}', steps.version.outputs.tag) }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        persist-credentials: false
+        submodules: recursive
+        ref: ${{ inputs.ref }}
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.13'
+    - id: version
+      run: python .github/release-tools/version.py
+    - uses: ./.github/actions/sdk-access
+      with:
+        token: ${{ github.event_name != 'pull_request' && (secrets.MIILO_SDK_READ_TOKEN || secrets.MIILO_WORKSPACE_READ_TOKEN)
+          || '' }}
+    - name: Install dist
+      shell: bash
+      run: python .github/release-tools/install-dist.py
+    - name: Cache dist
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: cargo-dist-cache
+        path: ${{ runner.temp }}/miilo-tools/dist
+    - id: plan
+      run: |-
+        dist plan --tag "$TAG" --output-format=json > plan-dist-manifest.json
+        cat plan-dist-manifest.json
+        echo "manifest=$(jq -c . plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
+      env:
+        TAG: ${{ steps.version.outputs.tag }}
+    - name: Upload dist-manifest.json
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: artifacts-plan-dist-manifest
+        path: plan-dist-manifest.json
+    permissions:
+      contents: read
+  build-node-package:
+    needs:
+    - plan
+    uses: ./.github/workflows/build-node-payload.yml
+    with:
+      ref: ${{ inputs.ref }}
+    permissions:
+      contents: read
+  build-local-artifacts:
+    name: build-local-artifacts (${{ join(matrix.targets, ', ') }})
+    timeout-minutes: 45
+    needs:
+    - plan
+    if: ${{ fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix.include != null }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container && matrix.container.image || null }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
+    permissions:
+      contents: read
+    steps:
+    - name: enable windows longpaths
+      run: |
+        git config --global core.longpaths true
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        persist-credentials: false
+        submodules: recursive
+        ref: ${{ inputs.ref }}
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.13'
+    - uses: ./.github/actions/sdk-access
+      with:
+        token: ${{ github.event_name != 'pull_request' && (secrets.MIILO_SDK_READ_TOKEN || secrets.MIILO_WORKSPACE_READ_TOKEN)
+          || '' }}
+    - name: Install Rust non-interactively if not already installed
+      if: ${{ matrix.container }}
+      run: |
+        if ! command -v cargo > /dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        fi
+    - name: Install dist
+      run: python .github/release-tools/install-dist.py
+    - name: Fetch local artifacts
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        pattern: artifacts-*
+        path: target/distrib/
+        merge-multiple: true
+    - name: Install dependencies
+      run: |
+        ${{ matrix.packages_install }}
+    - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+      with:
+        toolchain: 1.96.1
+        targets: ${{ join(matrix.targets, ',') }}
+    - name: Build artifacts
+      run: |
+        # Actually do builds and make zips and whatnot
+        dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
+        echo "dist ran successfully"
+    - name: Test the installed native archive
+      shell: bash
+      run: python .github/release-tools/check-native-artifact.py
+      env:
+        TARGETS: ${{ join(matrix.targets, ',') }}
+    - id: cargo-dist
+      name: Post-build
+      shell: bash
+      run: |
+        # Parse out what we just built and upload it to scratch storage
+        echo "paths<<EOF" >> "$GITHUB_OUTPUT"
+        dist print-upload-files-from-manifest --manifest dist-manifest.json >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        cp dist-manifest.json "$BUILD_MANIFEST_NAME"
+    - name: Verify Windows MSI installation and removal
+      if: contains(matrix.targets, 'x86_64-pc-windows-msvc')
+      shell: pwsh
+      run: ./.github/release-tools/check-windows-installer.ps1
+    - name: Upload artifacts
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: artifacts-build-local-${{ join(matrix.targets, '_') }}
+        path: |
+          ${{ steps.cargo-dist.outputs.paths }}
+          ${{ env.BUILD_MANIFEST_NAME }}
+  build-global-artifacts:
+    needs:
+    - plan
+    - build-local-artifacts
+    - build-node-package
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_MANIFEST_NAME: target/distrib/global-dist-manifest.json
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        persist-credentials: false
+        submodules: recursive
+        ref: ${{ inputs.ref }}
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.13'
+    - uses: ./.github/actions/sdk-access
+      with:
+        token: ${{ github.event_name != 'pull_request' && (secrets.MIILO_SDK_READ_TOKEN || secrets.MIILO_WORKSPACE_READ_TOKEN)
+          || '' }}
+    - name: Install cached dist
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: cargo-dist-cache
+        path: ${{ runner.temp }}/miilo-tools/
+    - run: |-
+        chmod +x "$RUNNER_TEMP/miilo-tools/dist"
+        echo "$RUNNER_TEMP/miilo-tools" >> "$GITHUB_PATH"
+    - name: Fetch local artifacts
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        pattern: artifacts-*
+        path: target/distrib/
+        merge-multiple: true
+    - id: cargo-dist
+      shell: bash
+      run: |
+        dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
+        echo "dist ran successfully"
+
+        # Parse out what we just built and upload it to scratch storage
+        echo "paths<<EOF" >> "$GITHUB_OUTPUT"
+        jq --raw-output ".upload_files[]" dist-manifest.json >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        cp dist-manifest.json "$BUILD_MANIFEST_NAME"
+    - name: Upload artifacts
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: artifacts-build-global
+        path: |
+          ${{ steps.cargo-dist.outputs.paths }}
+          ${{ env.BUILD_MANIFEST_NAME }}
+  ready:
+    name: Release rehearsal
+    timeout-minutes: 5
+    needs:
+    - plan
+    - build-node-package
+    - build-local-artifacts
+    - build-global-artifacts
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.result.outputs.ready }}
+    steps:
+    - id: result
+      shell: bash
+      env:
+        RESULTS: ${{ toJson(needs) }}
+      run: |-
+        python3 - <<'CHECK'
+        import json, os
+        results=json.loads(os.environ['RESULTS'])
+        failed=[name for name,value in results.items() if value['result'] != 'success']
+        if failed: raise SystemExit('Release rehearsal failed: '+', '.join(failed))
+        with open(os.environ['GITHUB_OUTPUT'],'a') as output: output.write('ready=true\n')
+        CHECK

@@ -7,7 +7,20 @@ name: CI
     - main
 permissions:
   contents: read
+concurrency:
+  group: cli-qualification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   qualification:
     uses: ./.github/workflows/qualify.yml
     secrets: inherit
+    needs: release-rehearsal
+    if: always()
+    with:
+      artifacts-ready: ${{ needs.release-rehearsal.result == 'success' }}
+  release-rehearsal:
+    uses: ./.github/workflows/build-release-artifacts.yml
+    with:
+      ref: ${{ github.sha }}
+    permissions:
+      contents: read

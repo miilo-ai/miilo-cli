@@ -20,6 +20,9 @@ Miilo CLI observes selected existing sessions locally, or connects to an optiona
 self-hosted/managed Miilo API. Standalone observation needs no account, CE process,
 Miilo URL, or listening HTTP service.
 
+Optional [operation tracing](docs/telemetry.md) exports metadata from explicit
+remote explanation requests to your chosen OTLP collector. It is off by default.
+
 ```bash
 miilo local discover /path/to/project
 miilo local setup /path/to/project

@@ -36,14 +36,19 @@ jobs:
       run: python .github/release-tools/publication.py
       env:
         MIILO_RELEASE_ENABLED: ${{ vars.MIILO_RELEASE_ENABLED }}
-        MIILO_PUBLISH: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIILO_RELEASE_ENABLED != 'false') || inputs.publish == true }}
+        MIILO_PUBLISH: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MIILO_RELEASE_ENABLED
+          != 'false') || inputs.publish == true }}
         RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DEPENDENCIES_READY: 'true'
   qualify:
-    needs: candidate
-    if: needs.candidate.outputs.publish == 'true' && needs.candidate.outputs.new == 'true'
+    needs:
+    - candidate
+    - rehearse
+    if: always() && needs.candidate.outputs.publish == 'true' && needs.candidate.outputs.new == 'true'
     uses: ./.github/workflows/qualify.yml
     secrets: inherit
+    with:
+      artifacts-ready: ${{ needs.rehearse.result == 'success' }}
   tag:
     needs:
     - candidate
@@ -87,3 +92,12 @@ jobs:
     - run: |-
         echo "No release has been made" >> "$GITHUB_STEP_SUMMARY"
         echo "No release has been made"
+  rehearse:
+    needs: candidate
+    if: needs.candidate.outputs.publish == 'true' && needs.candidate.outputs.new == 'true'
+    uses: ./.github/workflows/build-release-artifacts.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+    permissions:
+      contents: read

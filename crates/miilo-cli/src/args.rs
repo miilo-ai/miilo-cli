@@ -73,6 +73,12 @@ pub enum WorkCommand {
         target: String,
         #[arg(long)]
         question: Option<String>,
+        /// Opt in to metadata-only OTLP/HTTP traces at this full /v1/traces URL.
+        #[arg(long)]
+        telemetry_endpoint: Option<String>,
+        /// Private bearer-token file for the telemetry collector, not the Miilo API.
+        #[arg(long, requires = "telemetry_endpoint")]
+        telemetry_token_file: Option<std::path::PathBuf>,
     },
 }
 

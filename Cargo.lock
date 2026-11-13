@@ -1132,8 +1132,8 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "miilo-adapter-sdk"
-version = "0.3.0"
-source = "git+https://github.com/miilo-ai/miilo-sdk?rev=eab1561adc5015393d4b20ab502545b0554a3716#eab1561adc5015393d4b20ab502545b0554a3716"
+version = "0.3.1"
+source = "git+https://github.com/miilo-ai/miilo-sdk?rev=09d6630d855e0cb0cb69ce7e4508471c1b3a35c9#09d6630d855e0cb0cb69ce7e4508471c1b3a35c9"
 dependencies = [
  "async-trait",
  "brotli",

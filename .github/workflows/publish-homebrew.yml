@@ -57,6 +57,11 @@ jobs:
         ref: main
         fetch-depth: 0
         path: tap
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      if: steps.credentials.outputs.ready == 'true'
+      with:
+        persist-credentials: false
+        path: cli
     - name: Validate version and tap branch access
       id: target
       if: steps.credentials.outputs.ready == 'true'
@@ -97,13 +102,7 @@ jobs:
       run: |
         set -euo pipefail
         export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-        brew tap miilo-ai/cli "$GITHUB_WORKSPACE/tap"
-        brew audit --strict miilo-ai/cli/miilo
-        brew install miilo-ai/cli/miilo
-        brew test miilo-ai/cli/miilo
-        bash tools/test-archive-install.sh "$(brew --prefix miilo-ai/cli/miilo)/bin/miilo"
-        "$(brew --prefix miilo-ai/cli/miilo)/bin/miilo-local" --version
-        brew uninstall miilo-ai/cli/miilo
+        bash "$GITHUB_WORKSPACE/cli/.github/release-tools/check-homebrew-formula.sh" "$GITHUB_WORKSPACE/tap"
     - name: Open or reuse formula update PR
       if: steps.prepare.outputs.changed == 'true'
       env:

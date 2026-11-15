@@ -220,6 +220,46 @@ jobs:
         path: |
           ${{ steps.cargo-dist.outputs.paths }}
           ${{ env.BUILD_MANIFEST_NAME }}
+  homebrew-rehearsal:
+    needs: [plan, build-global-artifacts]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        persist-credentials: false
+        ref: ${{ inputs.ref }}
+        path: cli
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        repository: miilo-ai/homebrew-cli
+        ref: ea490be091f641cf794b528ceb8c1769ab823ee2
+        persist-credentials: false
+        path: tap
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: artifacts-build-global
+        path: tap/Formula
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: artifacts-build-local-x86_64-unknown-linux-gnu
+        path: native
+    - name: Prepare and exercise the candidate formula
+      shell: bash
+      env:
+        TAG: ${{ needs.plan.outputs.tag }}
+        HOMEBREW_NO_AUTO_UPDATE: '1'
+        HOMEBREW_NO_ANALYTICS: '1'
+      run: |
+        set -euo pipefail
+        export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+        python3 tap/tools/prepare_formula.py tap/Formula/miilo.rb "$TAG"
+        brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict --fix tap/Formula/miilo.rb
+        git -C tap config user.name 'Miilo rehearsal'
+        git -C tap config user.email 'rehearsal@users.noreply.github.com'
+        git -C tap add Formula/miilo.rb
+        git -C tap diff --cached --quiet || git -C tap commit -m 'Prepare candidate formula'
+        bash cli/.github/release-tools/check-homebrew-formula.sh "$GITHUB_WORKSPACE/tap" "$GITHUB_WORKSPACE/native/miilo-cli-x86_64-unknown-linux-gnu.tar.xz"
   ready:
     name: Release rehearsal
     timeout-minutes: 5
@@ -228,6 +268,7 @@ jobs:
     - build-node-package
     - build-local-artifacts
     - build-global-artifacts
+    - homebrew-rehearsal
     if: always()
     runs-on: ubuntu-latest
     outputs:

@@ -6,6 +6,8 @@ brew tap miilo-ai/cli "$tap_directory"
 brew trust --formula "$formula"
 brew audit --strict "$formula"
 if [ -n "${2:-}" ]; then
+  checksum=$(brew info --json=v2 "$formula" | python3 -c 'import json,sys; print(json.load(sys.stdin)["formulae"][0]["urls"]["stable"]["checksum"])')
+  printf '%s  %s\n' "$checksum" "$2" | shasum -a 256 --check
   cache=$(brew --cache --build-from-source "$formula")
   mkdir -p "$(dirname "$cache")"
   cp "$2" "$cache"

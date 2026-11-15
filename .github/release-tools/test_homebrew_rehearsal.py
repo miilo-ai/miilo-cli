@@ -1,4 +1,5 @@
 """Exercise formula trust, candidate caching and failure propagation without installing tools."""
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -16,6 +17,7 @@ case "$1" in
   tap) ;;
   trust) [ "${TRUST_FAIL:-0}" = 0 ]; touch "$FIXTURE/trusted" ;;
   audit) test -f "$FIXTURE/trusted" ;;
+  info) printf '{"formulae":[{"urls":{"stable":{"checksum":"%s"}}}]}\\n' "$EXPECTED_SHA" ;;
   --cache) printf '%s\\n' "$FIXTURE/cache/candidate.tar.xz" ;;
   install) [ "${INSTALL_FAIL:-0}" = 0 ]; test -f "$FIXTURE/trusted" ;;
   test|uninstall) ;;
@@ -40,7 +42,8 @@ class HomebrewRehearsalTests(unittest.TestCase):
             (stage / 'tools/test-archive-install.sh').write_text('test -n "$1"\n')
             archive = stage / 'archive'
             archive.write_bytes(b'candidate archive')
-            env = dict(os.environ, FIXTURE=folder, PATH=folder + ':' + os.environ['PATH'], **overrides)
+            env = dict(os.environ, EXPECTED_SHA=hashlib.sha256(archive.read_bytes()).hexdigest(), FIXTURE=folder, PATH=folder + ':' + os.environ['PATH'])
+            env.update(overrides)
             result = subprocess.run(['bash', str(SCRIPT), folder, str(archive)], env=env,
                                     text=True, capture_output=True, timeout=10)
             cache = stage / 'cache/candidate.tar.xz'
@@ -58,6 +61,12 @@ class HomebrewRehearsalTests(unittest.TestCase):
         result, calls, cached = self.exercise(TRUST_FAIL='1')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(len(calls), 2)
+        self.assertIsNone(cached)
+
+    def test_wrong_candidate_checksum_stops_before_install(self):
+        result, calls, cached = self.exercise(EXPECTED_SHA='0' * 64)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('install miilo-ai/cli/miilo', calls)
         self.assertIsNone(cached)
 
     def test_install_failure_is_not_hidden(self):

@@ -255,6 +255,10 @@ jobs:
         export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
         python3 tap/tools/prepare_formula.py tap/Formula/miilo.rb "$TAG"
         brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict --fix tap/Formula/miilo.rb
+        git -C tap config user.name 'Miilo rehearsal'
+        git -C tap config user.email 'rehearsal@users.noreply.github.com'
+        git -C tap add Formula/miilo.rb
+        git -C tap diff --cached --quiet || git -C tap commit -m 'Prepare candidate formula'
         bash cli/.github/release-tools/check-homebrew-formula.sh "$GITHUB_WORKSPACE/tap" "$GITHUB_WORKSPACE/native/miilo-cli-x86_64-unknown-linux-gnu.tar.xz"
   ready:
     name: Release rehearsal

@@ -25,3 +25,13 @@ The release environment may still require its configured reviewer approval.
 Check the published release and assets after a run; a green qualification or
 skipped-publication run alone is not evidence of publication. Optional external
 registries and Homebrew retain their separate credential requirements.
+
+Homebrew qualification audits, installs, tests and removes the generated candidate
+formula with formula-specific trust. PR rehearsal preloads the native candidate
+archive into Homebrew's checksum-verified cache, so unpublished versions can be
+tested without publishing. The protected tap updater uses the same checker.
+Neither path disables tap trust or grants whole-tap trust.
+
+To recover a published release whose tap update failed, run the Homebrew update
+workflow from main with the existing stable tag after the fix is merged. This
+opens or reuses a tap PR; it does not rebuild binaries or replace release tags.

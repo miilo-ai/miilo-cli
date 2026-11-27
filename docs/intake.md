@@ -83,7 +83,7 @@ miilo --endpoint http://127.0.0.1:3710   --token-file "$HOME/.config/miilo/intak
 miilo --endpoint http://127.0.0.1:3710   --token-file "$HOME/.config/miilo/intake-token" watch
 ```
 
-In Miilo One's menu choose Inbox. Under Settings → Intake, configure the endpoint
+In the Omarchy Miilo One menu choose Inbox. Under Settings → Intake, configure the endpoint
 and credential-file path. The plugin saves that file reference, never its token
 contents. An older CLI will reject the new command; install compatible builds
 before enabling the new interface.
@@ -175,9 +175,28 @@ miilo inbox --state "$MIILO_INTAKE_STATE" serve \
 miilo --socket "$HOME/.local/state/miilo/intake-api/service.sock" inbox list
 ```
 
-The server refuses an existing socket path and insecure parent directories.
+The server refuses active, foreign or insecure socket paths and insecure parent
+directories. Under its exclusive lock it can recover an owned, inactive socket
+left by an interrupted process. Graceful shutdown closes event streams and removes
+its own socket.
 The client requires a socket owned by the current user with mode 600. Unix
 socket mode deliberately uses OS identity instead of ambient HTTP credentials.
 For a remote private runtime, a deliberately configured SSH Unix-socket forward
 can retain that boundary without copying the remote service credentials to the
 client. Enrollment and SSH host authorization remain explicit operator actions.
+
+## Existing backend integration
+
+A Rust backend can implement `miilo_intake::service::Service` and pass it to
+`server::serve_unix` or `server::serve_backend`. These transports use its existing
+state through `snapshot` and `invoke`; they do not create a second execution
+queue. Manual import is optional: backends which own source discovery reject it
+unless they explicitly implement it. Your implementation must return a consistent
+revision, current capabilities and receipts, and enforce authorization again at
+the action boundary. Never trust an enabled client button as authorization.
+
+The Tauri desktop can connect through its existing connection settings using an
+explicit `unix:///absolute/path` URL, or through a Miilo-compatible HTTPS backend.
+Select the connection's observation session in your workspace before opening
+Inbox. The Omarchy client accepts a socket path directly in Settings → Intake.
+These are development integrations and require compatible unreleased builds.

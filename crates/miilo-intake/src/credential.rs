@@ -1,10 +1,12 @@
 //! Caller-owned credential-file adapter. Never copy credentials into inbox state.
+#[cfg(unix)]
 use std::{
     fs::{self, OpenOptions},
     io::Read,
     path::Path,
 };
 use zeroize::Zeroizing;
+#[cfg(unix)]
 pub fn read(path: &Path) -> Result<Zeroizing<String>, String> {
     let before = fs::symlink_metadata(path).map_err(|_| "Cannot inspect intake credential")?;
     if !before.is_file() || before.file_type().is_symlink() || before.len() > 4096 {
@@ -49,4 +51,9 @@ pub fn read(path: &Path) -> Result<Zeroizing<String>, String> {
         return Err("Credential must contain 32–1024 non-whitespace ASCII characters".into());
     }
     Ok(Zeroizing::new(trimmed.to_owned()))
+}
+
+#[cfg(not(unix))]
+pub fn read(_path: &std::path::Path) -> Result<Zeroizing<String>, String> {
+    Err("Private local intake credential files are not qualified on this platform; use a backend with native credential protection.".into())
 }

@@ -12,6 +12,11 @@ pub struct Files {
     root: PathBuf,
 }
 impl Files {
+    #[cfg(not(unix))]
+    pub fn new(_root: &Path) -> Result<Self, String> {
+        Err("The private local inbox currently requires Unix permission semantics. Connect to an existing intake over HTTPS on this platform.".into())
+    }
+    #[cfg(unix)]
     pub fn new(root: &Path) -> Result<Self, String> {
         if !root.is_absolute() {
             return Err("Intake state path must be absolute".into());

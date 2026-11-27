@@ -16,6 +16,12 @@ Miilo supports three integration paths:
 
 ## Manual inbox
 
+The private reference file store and credential-file adapter currently support
+Unix permission semantics (Linux/macOS). They fail closed on other platforms
+until equivalent native ACL protection is qualified. Windows clients can still
+connect to an existing compatible HTTPS intake; the SDK contracts and backend
+ports are platform independent.
+
 Choose a private state directory outside your repository. Use a distinct directory
 for each independent inbox. It receives a durable instance identity so two inboxes
 cannot accidentally reuse the same executor job identity.

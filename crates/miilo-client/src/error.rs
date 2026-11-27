@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
+    #[error("Miilo Unix socket must be a private socket owned by the current user")]
+    UnsafeUnixSocket,
+    #[error("Action receipt identity mismatch; reconcile at the provider before retrying")]
+    ActionIdentityMismatch,
     #[error("Miilo stream requires a fresh snapshot and subscription")]
     SnapshotRequired,
     #[error("Miilo response exceeded the client size limit")]

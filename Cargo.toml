@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/miilo-client", "crates/miilo-cli", "crates/miilo-local", "crates/miilo-pairing", "crates/miilo-telemetry"]
+members = ["crates/miilo-intake", "crates/miilo-client", "crates/miilo-cli", "crates/miilo-local", "crates/miilo-pairing", "crates/miilo-telemetry"]
 
 [workspace.package]
 version = "0.5.0"
@@ -13,7 +13,7 @@ authors = ["Miilo contributors"]
 publish = false
 
 [workspace.dependencies]
-miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "09d6630d855e0cb0cb69ce7e4508471c1b3a35c9" }
+miilo-adapter-sdk = { git = "https://github.com/miilo-ai/miilo-sdk", rev = "9c2c2d7423c4c41a7b5ee89459ac8f4f969467c3" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

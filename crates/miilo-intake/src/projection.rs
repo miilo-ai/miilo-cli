@@ -6,9 +6,9 @@ pub fn snapshot(state: &State, now: DateTime<Utc>) -> ObservatorySnapshot {
     let work_items = state.entries.values().map(project_item).collect();
     ObservatorySnapshot {
         protocol_version: "0.1".into(),
-        snapshot_id: format!("intake-{}", state.sequence),
+        snapshot_id: format!("intake-{}-{}", state.instance_id, state.sequence),
         observed_at: now,
-        cursor: state.sequence.to_string(),
+        cursor: format!("{}:{}", state.instance_id, state.sequence),
         providers: vec![ProviderDescriptor {
             id: PROVIDER.into(),
             name: "Manual inbox".into(),
@@ -23,7 +23,13 @@ pub fn snapshot(state: &State, now: DateTime<Utc>) -> ObservatorySnapshot {
                     action::DEFER.into(),
                     action::DISMISS.into(),
                 ],
-                features: BTreeMap::from([("intake.v1".into(), true), ("execution".into(), false)]),
+                features: BTreeMap::from([
+                    ("intake.v1".into(), true),
+                    (
+                        "execution".into(),
+                        state.entries.values().any(|e| e.job.is_some()),
+                    ),
+                ]),
                 speech: None,
                 model_routes: vec![],
             },

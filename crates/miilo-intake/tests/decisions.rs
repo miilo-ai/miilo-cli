@@ -128,3 +128,17 @@ fn storage_rejects_insecure_and_symlink_roots() {
     symlink(&target, &link).unwrap();
     assert!(Files::new(&link).is_err());
 }
+
+#[test]
+fn replacing_an_inbox_cannot_reuse_the_previous_stream_cursor() {
+    let first = State {
+        instance_id: "instance-one".into(),
+        ..State::default()
+    };
+    let mut second = first.clone();
+    second.instance_id = "instance-two".into();
+    let before = miilo_intake::projection::snapshot(&first, now());
+    let after = miilo_intake::projection::snapshot(&second, now());
+    assert_ne!(before.cursor, after.cursor);
+    assert_ne!(before.snapshot_id, after.snapshot_id);
+}

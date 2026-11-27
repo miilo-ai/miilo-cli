@@ -213,3 +213,60 @@ async fn unix_socket_uses_os_ownership_without_a_bearer_credential() {
     std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o666)).unwrap();
     assert!(miilo_client::MiiloClient::unix(&socket).is_err());
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn shutdown_closes_live_streams_and_releases_private_socket() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = tempfile::Builder::new()
+        .prefix("miilo-stop-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let state = root.path().join("state");
+    let socket = root.path().join("intake.sock");
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let mut server = Server(
+        Command::new(env!("CARGO_BIN_EXE_miilo"))
+            .args([
+                "inbox",
+                "--state",
+                state.to_str().unwrap(),
+                "serve",
+                "--listen-socket",
+                socket.to_str().unwrap(),
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let mut ready = None;
+    for _ in 0..50 {
+        if let Ok(client) = miilo_client::MiiloClient::unix(&socket) {
+            if client.health().await.is_ok() {
+                ready = Some(client);
+                break;
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    let client = ready.unwrap();
+    let _stream = client.observe().await.unwrap();
+    assert!(
+        Command::new("kill")
+            .args(["-TERM", &server.0.id().to_string()])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let mut stopped = false;
+    for _ in 0..100 {
+        if server.0.try_wait().unwrap().is_some() {
+            stopped = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    assert!(stopped, "active SSE prevented shutdown");
+    assert!(!socket.exists());
+}

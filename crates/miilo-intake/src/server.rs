@@ -22,6 +22,7 @@ use subtle::ConstantTimeEq;
 struct Context {
     service: Arc<dyn Service>,
     token_hash: Option<[u8; 32]>,
+    shutdown: tokio::sync::watch::Receiver<bool>,
 }
 type Error = (StatusCode, Json<Value>);
 fn error(status: StatusCode, message: &str) -> Error {
@@ -121,6 +122,9 @@ async fn events(
     }
     let stream = stream::unfold((c, last), |(c, mut last)| async move {
         loop {
+            if *c.shutdown.borrow() {
+                return None;
+            }
             let Ok(snapshot) = call(c.clone(), |s| s.snapshot()).await else {
                 return None;
             };
@@ -148,12 +152,17 @@ async fn events(
                     (c, last),
                 ));
             }
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            let mut shutdown = c.shutdown.clone();
+            tokio::select! { _=tokio::time::sleep(Duration::from_secs(2))=>{}, _=shutdown.changed()=>{return None;} }
         }
     });
     Ok(Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15))))
 }
-fn router(service: Arc<dyn Service>, token_hash: Option<[u8; 32]>) -> Router {
+fn router(
+    service: Arc<dyn Service>,
+    token_hash: Option<[u8; 32]>,
+    shutdown: tokio::sync::watch::Receiver<bool>,
+) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/v1/connections", get(connections))
@@ -165,6 +174,7 @@ fn router(service: Arc<dyn Service>, token_hash: Option<[u8; 32]>) -> Router {
         .with_state(Context {
             service,
             token_hash,
+            shutdown,
         })
 }
 pub async fn serve(root: &Path, bind: SocketAddr, token_file: &Path) -> Result<(), String> {
@@ -190,10 +200,9 @@ pub async fn serve_backend(
     let listener = tokio::net::TcpListener::bind(bind)
         .await
         .map_err(|_| "Cannot bind intake listener")?;
-    axum::serve(listener, router(service, Some(hash)))
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    axum::serve(listener, router(service, Some(hash), shutdown_rx))
+        .with_graceful_shutdown(shutdown_signal(shutdown_tx))
         .await
         .map_err(|_| "Intake listener failed".into())
 }
@@ -213,8 +222,45 @@ pub async fn serve_unix(service: Arc<dyn Service>, socket: &Path) -> Result<(), 
     {
         return Err("Socket directory must be owner-only (mode 700)".into());
     }
-    if std::fs::symlink_metadata(socket).is_ok() {
-        return Err("Socket path already exists; reconcile its owner before reuse".into());
+    use fs2::FileExt;
+    use std::os::unix::fs::{FileTypeExt, OpenOptionsExt};
+    let lock_path = socket.with_extension("lock");
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(lock_path)
+        .map_err(|_| "Cannot open socket ownership lock")?;
+    if !lock
+        .metadata()
+        .map_err(|_| "Cannot inspect socket lock")?
+        .is_file()
+    {
+        return Err("Socket lock must be a regular file".into());
+    }
+    lock.try_lock_exclusive()
+        .map_err(|_| "Another process owns the intake socket")?;
+    if let Ok(meta) = std::fs::symlink_metadata(socket) {
+        if !meta.file_type().is_socket()
+            || meta.uid() != unsafe { libc::geteuid() }
+            || meta.permissions().mode() & 0o077 != 0
+        {
+            return Err("Existing socket is not privately owned".into());
+        }
+        match tokio::time::timeout(
+            Duration::from_secs(1),
+            tokio::net::UnixStream::connect(socket),
+        )
+        .await
+        {
+            Ok(Err(error)) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
+                std::fs::remove_file(socket).map_err(|_| "Cannot retire stale owned socket")?;
+            }
+            _ => return Err("Existing socket is active or its outcome is unknown".into()),
+        }
     }
     let listener =
         tokio::net::UnixListener::bind(socket).map_err(|_| "Cannot bind intake socket")?;
@@ -223,11 +269,10 @@ pub async fn serve_unix(service: Arc<dyn Service>, socket: &Path) -> Result<(), 
     let socket_meta =
         std::fs::symlink_metadata(socket).map_err(|_| "Cannot inspect bound intake socket")?;
     let inode = socket_meta.ino();
-    let app = router(service, None);
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    let app = router(service, None, shutdown_rx);
     let result = axum::serve(listener, app)
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
+        .with_graceful_shutdown(shutdown_signal(shutdown_tx))
         .await
         .map_err(|_| "Intake socket listener failed".into());
     // A private directory prevents other identities replacing this socket.
@@ -235,4 +280,23 @@ pub async fn serve_unix(service: Arc<dyn Service>, socket: &Path) -> Result<(), 
         let _ = std::fs::remove_file(socket);
     }
     result
+}
+
+async fn shutdown_signal(sender: tokio::sync::watch::Sender<bool>) {
+    #[cfg(unix)]
+    {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut terminate) => {
+                tokio::select! {_=tokio::signal::ctrl_c()=>{},_=terminate.recv()=>{}}
+            }
+            Err(_) => {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
+    let _ = sender.send(true);
 }

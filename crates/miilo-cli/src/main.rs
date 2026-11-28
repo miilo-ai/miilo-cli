@@ -1,5 +1,6 @@
 mod args;
 mod credentials;
+mod inbox;
 mod output;
 mod telemetry;
 mod watch;
@@ -74,11 +75,82 @@ async fn main() -> ExitCode {
             Err(error) => fail(error),
         };
     }
-    let token = match credentials::resolve(args.token.clone(), args.token_file.as_deref()) {
+    if let Command::Inbox {
+        state,
+        command:
+            args::InboxCommand::Serve {
+                bind,
+                access_token_file,
+                listen_socket,
+            },
+    } = &args.command
+    {
+        let Some(path) = state else {
+            return fail("inbox serve requires --state");
+        };
+        let result = if let Some(socket) = listen_socket {
+            #[cfg(unix)]
+            {
+                miilo_intake::server::serve_unix(
+                    std::sync::Arc::new(miilo_intake::service::Manual { root: path.clone() }),
+                    socket,
+                )
+                .await
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = socket;
+                Err("Unix sockets are unavailable on this platform".into())
+            }
+        } else if let Some(token_file) = access_token_file {
+            miilo_intake::server::serve(path, *bind, token_file).await
+        } else {
+            Err("Choose --access-token-file for loopback HTTP or --listen-socket for a private Unix socket".into())
+        };
+        return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => fail(error),
+        };
+    }
+    if let Command::Inbox {
+        state: Some(path),
+        command,
+    } = &args.command
+    {
+        let path = path.clone();
+        let command = command.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            inbox::local(&path, &command).map_err(|e| e.to_string())
+        })
+        .await;
+        return match result.unwrap_or_else(|_| Err("Intake command interrupted".into())) {
+            Ok(value) => match output::json(&value) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => fail(error),
+            },
+            Err(error) => fail(error),
+        };
+    }
+    #[cfg(unix)]
+    let using_socket = args.socket.is_some();
+    #[cfg(not(unix))]
+    let using_socket = false;
+    let token = match if using_socket {
+        Ok(None)
+    } else {
+        credentials::resolve(args.token.clone(), args.token_file.as_deref())
+    } {
         Ok(token) => token,
         Err(error) => return fail(error),
     };
-    let client = match MiiloClient::new(&args.endpoint, token) {
+    #[cfg(unix)]
+    let connection = match &args.socket {
+        Some(socket) => MiiloClient::unix(socket),
+        None => MiiloClient::new(&args.endpoint, token),
+    };
+    #[cfg(not(unix))]
+    let connection = MiiloClient::new(&args.endpoint, token);
+    let client = match connection {
         Ok(client) => client,
         Err(error) => return fail(error),
     };
@@ -109,6 +181,16 @@ async fn run(
     match args.command {
         Command::Local { .. } | Command::Archive { .. } | Command::Config { .. } => {
             unreachable!("local commands are dispatched before HTTP configuration")
+        }
+        Command::Inbox {
+            state: None,
+            command,
+        } => {
+            let value = inbox::remote(client, command).await?;
+            output::json(&value)?;
+        }
+        Command::Inbox { state: Some(_), .. } => {
+            unreachable!("local inbox dispatched before credentials")
         }
         Command::Doctor => {
             let health = client.health().await?;

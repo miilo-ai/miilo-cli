@@ -22,6 +22,8 @@ name = "miilo-local"
 path = "src/local.rs"
 
 [dependencies]
+miilo-intake = { path = "../miilo-intake" }
+chrono = "0.4"
 miilo-local = { path = "../miilo-local" }
 clap = { version = "4", features = ["derive", "env"] }
 futures-util = "0.3"

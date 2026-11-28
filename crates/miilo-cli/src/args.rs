@@ -11,6 +11,9 @@ pub struct Args {
         global = true
     )]
     pub endpoint: String,
+    #[cfg(unix)]
+    #[arg(long, global = true)]
+    pub socket: Option<std::path::PathBuf>,
     #[arg(long, env = "MIILO_TOKEN", hide_env_values = true, global = true)]
     pub token: Option<String>,
     #[arg(
@@ -42,6 +45,13 @@ pub enum Command {
     Config {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
+    },
+    /// Inspect and decide incoming tasks. --state selects a private manual inbox.
+    Inbox {
+        #[arg(long)]
+        state: Option<std::path::PathBuf>,
+        #[command(subcommand)]
+        command: InboxCommand,
     },
     Doctor,
     Connections {
@@ -104,4 +114,47 @@ mod tests {
         );
         assert!(parse_target("task-1").is_err());
     }
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum InboxCommand {
+    /// Dispatch/reconcile accepted work through an explicitly configured executor.
+    Dispatch {
+        #[arg(long)]
+        config: std::path::PathBuf,
+    },
+    /// Serve the local manual inbox through the standard authenticated Miilo API.
+    Serve {
+        #[arg(long, default_value = "127.0.0.1:3710")]
+        bind: std::net::SocketAddr,
+        #[arg(long, conflicts_with = "listen_socket")]
+        access_token_file: Option<std::path::PathBuf>,
+        #[arg(long, conflicts_with = "access_token_file")]
+        listen_socket: Option<std::path::PathBuf>,
+    },
+    List,
+    Show {
+        target: String,
+    },
+    /// Explicitly import a submission JSON file into the local manual inbox.
+    Import {
+        file: std::path::PathBuf,
+    },
+    /// Invoke an advertised action; request/revision IDs bind the exact decision.
+    Decide {
+        target: String,
+        #[arg(long, value_parser=["accept", "defer", "dismiss"])]
+        action: String,
+        #[arg(long)]
+        revision: String,
+        #[arg(long)]
+        request_id: String,
+        /// Reuse this exact timestamp when retrying an uncertain request.
+        #[arg(long)]
+        confirmed_at: String,
+        #[arg(long, default_value="manual", value_parser=["manual", "voice"])]
+        method: String,
+        #[arg(long)]
+        until: Option<String>,
+    },
 }

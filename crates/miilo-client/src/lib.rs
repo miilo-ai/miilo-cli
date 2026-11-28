@@ -48,10 +48,55 @@ impl MiiloClient {
             bearer_token,
             http: reqwest::Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
+                .retry(reqwest::retry::never())
                 .connect_timeout(std::time::Duration::from_secs(5))
                 .read_timeout(std::time::Duration::from_secs(45))
                 .build()?,
         })
+    }
+
+    /// Connect through an owner-only Unix socket without a cached bearer token.
+    #[cfg(unix)]
+    pub fn unix(socket: &std::path::Path) -> Result<Self, ClientError> {
+        use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
+        let meta = std::fs::symlink_metadata(socket).map_err(|_| ClientError::UnsafeUnixSocket)?;
+        if !meta.file_type().is_socket()
+            || meta.permissions().mode() & 0o077 != 0
+            || meta.uid() != unsafe { libc::geteuid() }
+        {
+            return Err(ClientError::UnsafeUnixSocket);
+        }
+        Ok(Self {
+            endpoint: Url::parse("http://localhost/")?,
+            bearer_token: None,
+            http: reqwest::Client::builder()
+                .unix_socket(socket)
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .retry(reqwest::retry::never())
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .read_timeout(std::time::Duration::from_secs(45))
+                .build()?,
+        })
+    }
+
+    /// Mutations are never automatically retried. Reconcile with the same request key.
+    pub async fn invoke(
+        &self,
+        action: &miilo_adapter_sdk::ActionInvocation,
+    ) -> Result<miilo_adapter_sdk::ActionResult, ClientError> {
+        let url = self.endpoint.join("v1/actions")?;
+        let result: miilo_adapter_sdk::ActionResult = self
+            .send_json(self.authorize(self.http.post(url)).json(action))
+            .await?;
+        if result.protocol_version != "0.1"
+            || result.request_id != action.request_id
+            || result.provider_id != action.provider_id
+            || result.action_id != action.action_id
+        {
+            return Err(ClientError::ActionIdentityMismatch);
+        }
+        Ok(result)
     }
 
     pub async fn health(&self) -> Result<HealthResponse, ClientError> {

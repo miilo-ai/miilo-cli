@@ -199,3 +199,7 @@ service configuration and cache locations remain intact. Environment overrides
 Keyring conversion is not implemented by this migration.
 
 Release scope and remaining validation: [release status](docs/release-status.md).
+
+## Task intake (unreleased)
+
+See [Incoming tasks](docs/intake.md) for the manual inbox, compatible backend contract, durable decisions and optional executor integration.

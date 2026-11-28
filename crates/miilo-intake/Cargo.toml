@@ -1,0 +1,23 @@
+[package]
+name = "miilo-intake"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+miilo-adapter-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+fs2 = "0.4"
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+sha2 = "0.10"
+zeroize = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+subtle = "2.6"
+axum = "0.8"
+futures-util = "0.3"
+tokio = { workspace = true, features = ["net"] }
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
